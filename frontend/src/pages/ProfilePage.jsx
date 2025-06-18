@@ -6,6 +6,25 @@ const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
   const [selectedImg, setSelectedImg] = useState(null);
 
+  // Add a loading state for when authUser is not fully loaded
+  if (!authUser) {
+    return (
+      <div className="h-screen pt-20">
+        <div className="max-w-2xl mx-auto p-4 py-8">
+          <div className="bg-base-300 rounded-xl p-6 space-y-8">
+            <div className="text-center">
+              <div className="skeleton h-8 w-32 mx-auto mb-2"></div>
+              <div className="skeleton h-4 w-48 mx-auto"></div>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="skeleton size-32 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -89,9 +108,8 @@ const ProfilePage = () => {
               <div className="flex items-center justify-between py-2 border-b border-zinc-700">
                 <span>Member Since</span>
                 <span className="bg-base-200 px-3 py-1 rounded">
-                    {authUser.createdAt?.split("T")[0]}
-                    </span>
-
+                  {authUser?.createdAt ? authUser.createdAt.split("T")[0] : "Loading..."}
+                </span>
               </div>
               <div className="flex items-center justify-between py-2">
                 <span>Account Status</span>

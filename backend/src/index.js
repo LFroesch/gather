@@ -1,9 +1,13 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.route.js';
+import messageRoutes from './routes/message.route.js';
+import postRoutes from './routes/post.route.js';
+import eventRoutes from './routes/event.route.js';
+import followRoutes from './routes/follow.route.js';
+import geoRoutes from './routes/geo.route.js';
 import { connectDB } from './lib/db.js';
 import cookieParser from 'cookie-parser';
-import messageRoutes from './routes/message.route.js';
 import cors from 'cors';
 import { app, server } from "./lib/socket.js";
 import path from 'path';
@@ -24,6 +28,10 @@ app.use(cookieParser());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/follow", followRoutes);
+app.use("/api/geo", geoRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === "production") {

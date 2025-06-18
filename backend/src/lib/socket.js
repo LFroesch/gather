@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import { Notification } from "../models/follow.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -26,6 +27,33 @@ io.on("connection", (socket) => {
 
   // io.emit() is used to send events to all the connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // Handle real-time notifications
+  socket.on("sendNotification", async (notificationData) => {
+    try {
+      const { recipientId, type, message, relatedPost, relatedEvent } = notificationData;
+      
+      // Create notification in database
+      const notification = new Notification({
+        recipient: recipientId,
+        sender: userId,
+        type,
+        message,
+        relatedPost,
+        relatedEvent
+      });
+      await notification.save();
+      await notification.populate('sender', 'fullName username profilePic');
+
+      // Send real-time notification to recipient if online
+      const recipientSocketId = getReceiverSocketId(recipientId);
+      if (recipientSocketId) {
+        io.to(recipientSocketId).emit("newNotification", notification);
+      }
+    } catch (error) {
+      console.log("Error in sendNotification:", error);
+    }
+  });
 
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.id);
