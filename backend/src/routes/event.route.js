@@ -86,22 +86,20 @@ router.get("/nearby", protectRoute, async (req, res) => {
 
     const events = await Event.aggregate([
       {
-        $match: {
-          date: { $gte: new Date() }, // Only future events
-          isPrivate: false // Only public events
-        }
-      },
-      {
         $geoNear: {
-          near: {
+        near: {
             type: "Point",
             coordinates: searchLocation
-          },
-          distanceField: "distance",
-          maxDistance: radiusInMeters,
-          spherical: true
+        },
+        distanceField: "distance",
+        maxDistance: radiusInMeters,
+        spherical: true,
+        query: {
+            date: { $gte: new Date() },
+            isPrivate: false
         }
-      },
+        }
+    },
       { $sort: { date: 1 } }, // Sort by event date
       { $skip: skip },
       { $limit: limit },

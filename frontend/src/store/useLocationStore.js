@@ -7,78 +7,6 @@ export const useLocationStore = create((set, get) => ({
   locationSettings: null,
   isLoading: false,
   isUpdating: false,
-  hasLocationPermission: false,
-
-  // Get user's current position
-  getCurrentPosition: () => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation is not supported by this browser"));
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          resolve([longitude, latitude]); // MongoDB format [lng, lat]
-        },
-        (error) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              reject(new Error("Location access denied by user"));
-              break;
-            case error.POSITION_UNAVAILABLE:
-              reject(new Error("Location information unavailable"));
-              break;
-            case error.TIMEOUT:
-              reject(new Error("Location request timed out"));
-              break;
-            default:
-              reject(new Error("An unknown error occurred"));
-              break;
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      );
-    });
-  },
-
-  // Request location permission and get current location
-  requestLocationPermission: async () => {
-    try {
-      const coordinates = await get().getCurrentPosition();
-      set({ hasLocationPermission: true });
-      
-      // Reverse geocode to get city
-      const locationData = await get().reverseGeocode(coordinates);
-      await get().updateCurrentLocation(locationData);
-      
-      return locationData;
-    } catch (error) {
-      console.log("Location permission error:", error.message);
-      toast.error(error.message);
-      set({ hasLocationPermission: false });
-      throw error;
-    }
-  },
-
-  // Reverse geocode coordinates to city
-  reverseGeocode: async (coordinates) => {
-    try {
-      const res = await axiosInstance.post("/geo/reverse-geocode", { coordinates });
-      return {
-        ...res.data,
-        coordinates
-      };
-    } catch (error) {
-      toast.error("Failed to get location details");
-      throw error;
-    }
-  },
 
   // Update user's current location
   updateCurrentLocation: async (locationData) => {
@@ -86,6 +14,13 @@ export const useLocationStore = create((set, get) => ({
     try {
       const res = await axiosInstance.put("/geo/current-location", locationData);
       set({ currentLocation: res.data.currentCity });
+      toast.success("Location updated successfully!");
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('locationChanged', { 
+        detail: res.data.currentCity 
+      }));
+      
       return res.data.currentCity;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update current location");
@@ -119,7 +54,12 @@ export const useLocationStore = create((set, get) => ({
     try {
       const res = await axiosInstance.put("/geo/settings", settings);
       set({ locationSettings: res.data.locationSettings });
-      toast.success("Location settings updated successfully!");
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('locationSettingsChanged', { 
+        detail: res.data.locationSettings 
+      }));
+      
       return res.data.locationSettings;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update location settings");
@@ -170,19 +110,8 @@ export const useLocationStore = create((set, get) => ({
   // Initialize location on app start
   initializeLocation: async () => {
     try {
-      // First get saved settings
+      // Get saved settings
       await get().getLocationSettings();
-      
-      const { locationSettings } = get();
-      
-      // If auto-detect is enabled and no current location, try to get it
-      if (locationSettings?.autoDetectLocation && !get().isLocationSet()) {
-        try {
-          await get().requestLocationPermission();
-        } catch (error) {
-          console.log("Auto location detection failed:", error.message);
-        }
-      }
     } catch (error) {
       console.log("Location initialization failed:", error);
     }

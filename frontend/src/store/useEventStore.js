@@ -9,6 +9,7 @@ export const useEventStore = create((set, get) => ({
   selectedEvent: null,
   isLoading: false,
   isCreating: false,
+  lastFetchParams: null,
 
   // Create a new event
   createEvent: async (eventData) => {
@@ -33,12 +34,20 @@ export const useEventStore = create((set, get) => ({
   },
 
   // Get nearby events
-  getNearbyEvents: async (page = 1) => {
+  getNearbyEvents: async (page = 1, forceRefresh = false) => {
+    // If it's a forced refresh (location/radius changed), reset page to 1
+    if (forceRefresh) {
+      page = 1;
+    }
+
     set({ isLoading: true });
     try {
       const res = await axiosInstance.get(`/events/nearby?page=${page}&limit=10`);
       
-      if (page === 1) {
+      // Store fetch parameters for potential refetching
+      set({ lastFetchParams: { type: 'nearby', page } });
+      
+      if (page === 1 || forceRefresh) {
         set({ nearbyEvents: res.data });
       } else {
         set((state) => ({
@@ -58,6 +67,9 @@ export const useEventStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/events/my-events?page=${page}&limit=10`);
       
+      // Store fetch parameters for potential refetching
+      set({ lastFetchParams: { type: 'my', page } });
+      
       if (page === 1) {
         set({ myEvents: res.data });
       } else {
@@ -69,6 +81,18 @@ export const useEventStore = create((set, get) => ({
       toast.error(error.response?.data?.message || "Failed to load your events");
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  // Refetch current data (useful when location changes)
+  refetchCurrentEvents: async () => {
+    const { lastFetchParams } = get();
+    if (!lastFetchParams) return;
+
+    if (lastFetchParams.type === 'nearby') {
+      await get().getNearbyEvents(1, true);
+    } else if (lastFetchParams.type === 'my') {
+      await get().getMyEvents(1);
     }
   },
 
@@ -160,12 +184,35 @@ export const useEventStore = create((set, get) => ({
       events: [],
       myEvents: [],
       nearbyEvents: [],
-      selectedEvent: null
+      selectedEvent: null,
+      lastFetchParams: null
     });
   },
 
   // Set selected event
   setSelectedEvent: (event) => {
     set({ selectedEvent: event });
+  },
+
+  // Initialize location change listener
+  initLocationListener: () => {
+    const handleLocationChange = () => {
+      // Automatically refetch nearby events when location changes
+      get().refetchCurrentEvents();
+    };
+
+    const handleLocationSettingsChange = () => {
+      // Refetch when radius or other settings change
+      get().refetchCurrentEvents();
+    };
+
+    window.addEventListener('locationChanged', handleLocationChange);
+    window.addEventListener('locationSettingsChanged', handleLocationSettingsChange);
+
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('locationChanged', handleLocationChange);
+      window.removeEventListener('locationSettingsChanged', handleLocationSettingsChange);
+    };
   }
 }));

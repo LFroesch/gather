@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare, User, AtSign } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import AuthImagePattern from "../components/AuthImagePattern";
@@ -10,21 +10,25 @@ const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
+    username: "", // Add this line
     email: "",
     password: "",
   });
 
   const { signup, isSigningUp } = useAuthStore();
 
-  const validateForm = () => {
-    if (!formData.fullName.trim()) return toast.error("Full name is required");
-    if (!formData.email.trim()) return toast.error("Email is required");
-    if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
-    if (!formData.password) return toast.error("Password is required");
-    if (formData.password.length < 6) return toast.error("Password must be at least 6 characters");
-
-    return true;
-  };
+const validateForm = () => {
+  if (!formData.fullName.trim()) return toast.error("Full name is required");
+  if (!formData.username.trim()) return toast.error("Username is required");
+  if (formData.username.length < 3) return toast.error("Username must be at least 3 characters");
+  if (formData.username.length > 20) return toast.error("Username must be less than 20 characters");
+  if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) return toast.error("Username can only contain letters, numbers, and underscores");
+  if (!formData.email.trim()) return toast.error("Email is required");
+  if (!/\S+@\S+\.\S+/.test(formData.email)) return toast.error("Invalid email format");
+  if (!formData.password) return toast.error("Password is required");
+  if (formData.password.length < 6) return toast.error("Password must be at least 6 characters");
+  return true;
+};
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -52,8 +56,10 @@ const SignUpPage = () => {
               <p className="text-base-content/60">Get started with your free account</p>
             </div>
           </div>
-
+          {/* Sign Up Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Full Name */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Full Name</span>
@@ -72,6 +78,32 @@ const SignUpPage = () => {
               </div>
             </div>
 
+            {/* Username */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Username</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <AtSign className="size-5 text-base-content/40" />
+                </div>
+                <input
+                  type="text"
+                  className="input input-bordered w-full pl-10"
+                  placeholder="johndoe"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                  maxLength={20}
+                />
+              </div>
+              <label className="label">
+                <span className="label-text-alt">
+                  {formData.username.length}/20 characters • Letters, numbers, and underscores only
+                </span>
+              </label>
+            </div>
+
+            {/* Email */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Email</span>
@@ -90,6 +122,7 @@ const SignUpPage = () => {
               </div>
             </div>
 
+            {/* Password */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Password</span>

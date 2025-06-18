@@ -9,6 +9,7 @@ export const usePostStore = create((set, get) => ({
   userPosts: [],
   isLoading: false,
   isCreating: false,
+  lastFetchParams: null,
 
   // Create a new post
   createPost: async (postData) => {
@@ -38,6 +39,8 @@ export const usePostStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/posts/following?page=${page}&limit=10`);
       
+      set({ lastFetchParams: { type: 'following', page } });
+      
       if (page === 1) {
         set({ followingPosts: res.data });
       } else {
@@ -53,12 +56,19 @@ export const usePostStore = create((set, get) => ({
   },
 
   // Get nearby posts
-  getNearbyPosts: async (page = 1) => {
+  getNearbyPosts: async (page = 1, forceRefresh = false) => {
+    // If it's a forced refresh (location/radius changed), reset page to 1
+    if (forceRefresh) {
+      page = 1;
+    }
+
     set({ isLoading: true });
     try {
       const res = await axiosInstance.get(`/posts/nearby?page=${page}&limit=10`);
       
-      if (page === 1) {
+      set({ lastFetchParams: { type: 'nearby', page } });
+      
+      if (page === 1 || forceRefresh) {
         set({ nearbyPosts: res.data });
       } else {
         set((state) => ({
@@ -78,6 +88,8 @@ export const usePostStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/posts/user/${userId}?page=${page}&limit=10`);
       
+      set({ lastFetchParams: { type: 'user', userId, page } });
+      
       if (page === 1) {
         set({ userPosts: res.data });
       } else {
@@ -89,6 +101,20 @@ export const usePostStore = create((set, get) => ({
       toast.error(error.response?.data?.message || "Failed to load user posts");
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  // Refetch current data (useful when location changes)
+  refetchCurrentPosts: async () => {
+    const { lastFetchParams } = get();
+    if (!lastFetchParams) return;
+
+    if (lastFetchParams.type === 'nearby') {
+      await get().getNearbyPosts(1, true);
+    } else if (lastFetchParams.type === 'following') {
+      await get().getFollowingPosts(1);
+    } else if (lastFetchParams.type === 'user') {
+      await get().getUserPosts(lastFetchParams.userId, 1);
     }
   },
 
@@ -152,7 +178,30 @@ export const usePostStore = create((set, get) => ({
       posts: [],
       followingPosts: [],
       nearbyPosts: [],
-      userPosts: []
+      userPosts: [],
+      lastFetchParams: null
     });
+  },
+
+  // Initialize location change listener for posts
+  initLocationListener: () => {
+    const handleLocationChange = () => {
+      // Automatically refetch nearby posts when location changes
+      get().refetchCurrentPosts();
+    };
+
+    const handleLocationSettingsChange = () => {
+      // Refetch when radius or other settings change
+      get().refetchCurrentPosts();
+    };
+
+    window.addEventListener('locationChanged', handleLocationChange);
+    window.addEventListener('locationSettingsChanged', handleLocationSettingsChange);
+
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('locationChanged', handleLocationChange);
+      window.removeEventListener('locationSettingsChanged', handleLocationSettingsChange);
+    };
   }
 }));

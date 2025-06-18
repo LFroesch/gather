@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOut, MessageSquare, Settings, User } from "lucide-react";
+import { LogOut, MessageSquare, Settings, User, Bell, Plus, Calendar } from "lucide-react";
+import { useState } from "react";
 
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
 
   return (
     <header
@@ -11,40 +13,102 @@ const Navbar = () => {
     backdrop-blur-lg bg-base-100/80"
     >
       <div className="container mx-auto px-4 h-16">
-        <div className="flex items-center justify-center gap-6 h-full">
-          <div className="flex items-center gap-8 lg:mr-96">
-            <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-all">
-              <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-primary" />
-              </div>
-              <h1 className="text-lg font-bold">Event Chat</h1>
-            </Link>
-          </div>
+        <div className="flex items-center justify-between h-full">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-all">
+            <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 text-primary" />
+            </div>
+            <h1 className="text-lg font-bold">Event Chat</h1>
+          </Link>
 
-          <div className="flex items-center gap-2 lg:ml-48">
-            <Link
-              to={"/settings"}
-              className={`
-              btn btn-sm gap-2 transition-colors
-              
-              `}
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </Link>
+          {/* Center Navigation (only show when logged in) */}
+          {authUser && (
+            <nav className="hidden md:flex items-center gap-1">
+              <Link to="/" className="btn btn-ghost btn-sm">
+                Home
+              </Link>
+              <Link to="/notifications" className="btn btn-ghost btn-sm">
+                <Bell className="w-4 h-4" />
+                Notifications
+              </Link>
+              <Link to="/messages" className="btn btn-ghost btn-sm">
+                <MessageSquare className="w-4 h-4" />
+                Messages
+              </Link>
+            </nav>
+          )}
 
+          {/* Right Side Actions */}
+          <div className="flex items-center gap-2">
             {authUser && (
               <>
-                <Link to={"/profile"} className={`btn btn-sm gap-2`}>
-                  <User className="size-5" />
-                  <span className="hidden sm:inline">Profile</span>
-                </Link>
+                {/* Create Dropdown */}
+                <div className="dropdown dropdown-end">
+                  <button
+                    tabIndex={0}
+                    className="btn btn-primary btn-sm gap-2"
+                    onClick={() => setShowCreateMenu(!showCreateMenu)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Create</span>
+                  </button>
+                  <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 mt-2">
+                    <li>
+                      <Link to="/create-event" className="gap-2">
+                        <Calendar className="w-4 h-4" />
+                        New Event
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/create-post" className="gap-2">
+                        <MessageSquare className="w-4 h-4" />
+                        New Post
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
 
-                <Link to={"/login"} className={`btn btn-sm gap-2`} onClick={logout}>
-                  <LogOut className="size-5" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Link>
+                {/* Profile Menu */}
+                <div className="dropdown dropdown-end">
+                  <button tabIndex={0} className="btn btn-ghost btn-circle avatar">
+                    <div className="w-8 h-8 rounded-full">
+                      <img src={authUser.profilePic || "/avatar.png"} alt="Profile" />
+                    </div>
+                  </button>
+                  <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 mt-2">
+                    <li>
+                      <Link to="/profile" className="gap-2">
+                        <User className="w-4 h-4" />
+                        Profile
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/settings" className="gap-2">
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </Link>
+                    </li>
+                    <li>
+                      <button onClick={logout} className="gap-2">
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </>
+            )}
+
+            {!authUser && (
+              <div className="flex items-center gap-2">
+                <Link to="/login" className="btn btn-ghost btn-sm">
+                  Login
+                </Link>
+                <Link to="/signup" className="btn btn-primary btn-sm">
+                  Sign Up
+                </Link>
+              </div>
             )}
           </div>
         </div>

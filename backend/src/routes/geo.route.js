@@ -44,8 +44,7 @@ router.put("/settings", protectRoute, async (req, res) => {
   try {
     const { 
       searchLocation, 
-      nearMeRadius, 
-      autoDetectLocation 
+      nearMeRadius
     } = req.body;
     const userId = req.user._id;
 
@@ -73,10 +72,6 @@ router.put("/settings", protectRoute, async (req, res) => {
         });
       }
       updateData['locationSettings.nearMeRadius'] = nearMeRadius;
-    }
-
-    if (autoDetectLocation !== undefined) {
-      updateData['locationSettings.autoDetectLocation'] = autoDetectLocation;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -112,7 +107,7 @@ router.get("/settings", protectRoute, async (req, res) => {
   }
 });
 
-// Search cities (for autocomplete)
+// Search cities using OpenStreetMap Nominatim (FREE) - Limited to USA/North America
 router.get("/search-cities", protectRoute, async (req, res) => {
   try {
     const { query } = req.query;
@@ -121,10 +116,84 @@ router.get("/search-cities", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Query must be at least 2 characters" });
     }
 
-    // This is a simplified city search. In production, you'd want to use:
-    // - A proper geocoding service (Google Places, Mapbox, etc.)
-    // - A comprehensive city database
-    // For now, returning mock data
+    // Use Nominatim API for real city search - Limited to North America
+    const encodedQuery = encodeURIComponent(query);
+    
+    // Option 1: Limit to specific countries (USA, Canada, Mexico)
+    const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=us&limit=10&addressdetails=1&featuretype=city`;
+    
+    const response = await fetch(nominatimUrl, {
+      headers: {
+        'User-Agent': 'EventChatApp/1.0' // Nominatim requires a User-Agent
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Geocoding service unavailable');
+    }
+    
+    const data = await response.json();
+    
+    // Transform the data to our format and filter for North American countries
+    const allowedCountries = ['United States', 'Canada', 'Mexico', 'US', 'USA'];
+    
+    const cities = data
+      .filter(item => {
+        // Filter for cities, towns, villages, etc.
+        const placeTypes = ['city', 'town', 'village', 'municipality', 'borough'];
+        const hasValidType = item.addresstype && (
+          placeTypes.includes(item.addresstype) || 
+          placeTypes.includes(item.type) ||
+          item.address?.city || 
+          item.address?.town || 
+          item.address?.village
+        );
+        
+        // Additional filter for North American countries
+        const country = item.address?.country || '';
+        const isNorthAmerica = allowedCountries.some(allowed => 
+          country.toLowerCase().includes(allowed.toLowerCase())
+        );
+        
+        return hasValidType && isNorthAmerica;
+      })
+      .map(item => {
+        const address = item.address || {};
+        
+        // Extract city name
+        let city = address.city || address.town || address.village || address.municipality || address.borough;
+        
+        // If no city found, try to extract from display_name
+        if (!city) {
+          const parts = item.display_name.split(',');
+          city = parts[0].trim();
+        }
+        
+        // Extract state/province
+        let state = address.state || address.province || address.region || address.county;
+        
+        // Extract country
+        let country = address.country || 'Unknown';
+        
+        // Convert coordinates to our format [lng, lat]
+        const coordinates = [parseFloat(item.lon), parseFloat(item.lat)];
+        
+        return {
+          city: city || 'Unknown City',
+          state: state || 'Unknown State',
+          country,
+          coordinates,
+          displayName: item.display_name
+        };
+      })
+      .filter(city => city.city !== 'Unknown City') // Remove entries without proper city names
+      .slice(0, 8); // Limit to 8 results
+
+    res.status(200).json(cities);
+  } catch (error) {
+    console.log("Error in searchCities:", error.message);
+    
+    // Fallback to mock data if geocoding fails (USA cities only)
     const mockCities = [
       { city: "San Francisco", state: "CA", country: "USA", coordinates: [-122.4194, 37.7749] },
       { city: "Los Angeles", state: "CA", country: "USA", coordinates: [-118.2437, 34.0522] },
@@ -133,54 +202,17 @@ router.get("/search-cities", protectRoute, async (req, res) => {
       { city: "Austin", state: "TX", country: "USA", coordinates: [-97.7431, 30.2672] },
       { city: "Seattle", state: "WA", country: "USA", coordinates: [-122.3321, 47.6062] },
       { city: "Denver", state: "CO", country: "USA", coordinates: [-104.9903, 39.7392] },
-      { city: "Miami", state: "FL", country: "USA", coordinates: [-80.1918, 25.7617] }
-    ];
-
-    const filteredCities = mockCities.filter(city => 
+      { city: "Miami", state: "FL", country: "USA", coordinates: [-80.1918, 25.7617] },
+      { city: "Boston", state: "MA", country: "USA", coordinates: [-71.0588, 42.3601] },
+      { city: "Portland", state: "OR", country: "USA", coordinates: [-122.6765, 45.5152] },
+      { city: "Phoenix", state: "AZ", country: "USA", coordinates: [-112.0740, 33.4484] },
+      { city: "Atlanta", state: "GA", country: "USA", coordinates: [-84.3880, 33.7490] },
+    ].filter(city => 
       city.city.toLowerCase().includes(query.toLowerCase()) ||
       city.state.toLowerCase().includes(query.toLowerCase())
     );
 
-    res.status(200).json(filteredCities);
-  } catch (error) {
-    console.log("Error in searchCities:", error.message);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// Reverse geocode coordinates to city
-router.post("/reverse-geocode", protectRoute, async (req, res) => {
-  try {
-    const { coordinates } = req.body;
-    
-    if (!coordinates || coordinates.length !== 2) {
-      return res.status(400).json({ message: "Coordinates [lng, lat] are required" });
-    }
-
-    // This is a mock reverse geocoding function
-    // In production, you'd use a real geocoding service
-    const mockReverseGeocode = (lng, lat) => {
-      // Very simplified - you'd call an actual geocoding API here
-      if (lng >= -125 && lng <= -114 && lat >= 32 && lat <= 42) {
-        return { city: "San Francisco", state: "CA", country: "USA" };
-      }
-      if (lng >= -119 && lng <= -117 && lat >= 33 && lat <= 35) {
-        return { city: "Los Angeles", state: "CA", country: "USA" };
-      }
-      // Default fallback
-      return { city: "Unknown City", state: "Unknown", country: "USA" };
-    };
-
-    const [lng, lat] = coordinates;
-    const locationData = mockReverseGeocode(lng, lat);
-
-    res.status(200).json({
-      ...locationData,
-      coordinates
-    });
-  } catch (error) {
-    console.log("Error in reverseGeocode:", error.message);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(200).json(mockCities);
   }
 });
 

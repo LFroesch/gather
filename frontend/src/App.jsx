@@ -6,6 +6,12 @@ import SignUpPage from "./pages/SignUpPage"
 import LoginPage from "./pages/LoginPage"
 import SettingsPage from "./pages/SettingsPage"
 import ProfilePage from "./pages/ProfilePage"
+import OtherUserProfilePage from "./pages/OtherUserProfilePage"
+import EventPage from "./pages/EventPage"
+import NotificationsPage from "./pages/NotificationsPage"
+import MessagingPage from "./pages/MessagingPage"
+import CreateEventPage from "./pages/CreateEventPage"
+import CreatePostPage from "./pages/CreatePostPage"
 import Footer from "./components/Footer"
 import { useAuthStore } from "./store/useAuthStore"
 import { useEffect } from "react"
@@ -25,7 +31,7 @@ const App = () => {
 
   if (isCheckingAuth && !authUser)
     return (
-    <div>
+    <div className="min-h-screen flex items-center justify-center">
       <Loader className="size-10 animate-spin"/>
     </div>
     )
@@ -37,8 +43,14 @@ const App = () => {
         <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />}/>
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={authUser ? <SettingsPage /> : <Navigate to="/login" />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+        <Route path="/profile/:username" element={authUser ? <OtherUserProfilePage /> : <Navigate to="/login" />} />
+        <Route path="/events/:eventId" element={authUser ? <EventPage /> : <Navigate to="/login" />} />
+        <Route path="/notifications" element={authUser ? <NotificationsPage /> : <Navigate to="/login" />} />
+        <Route path="/messages" element={authUser ? <MessagingPage /> : <Navigate to="/login" />} />
+        <Route path="/create-event" element={authUser ? <CreateEventPage /> : <Navigate to="/login" />} />
+        <Route path="/create-post" element={authUser ? <CreatePostPage /> : <Navigate to="/login" />} />
       </Routes>
       <Footer/>
       <Toaster/>

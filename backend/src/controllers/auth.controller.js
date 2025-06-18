@@ -42,8 +42,7 @@ export const signup = async (req, res) => {
           country: "",
           coordinates: [0, 0]
         },
-        nearMeRadius: 25,
-        autoDetectLocation: true
+        nearMeRadius: 25
       },
       currentCity: {
         city: "",
