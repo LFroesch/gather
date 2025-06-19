@@ -14,32 +14,66 @@ import {
 import { useEventStore } from '../store/useEventStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useChatStore } from '../store/useChatStore';
+import { useLocationStore } from '../store/useLocationStore';
+import { formatDistance } from '../lib/utils';
 import ShareModal from '../components/ShareModal';
+import EditEventModal from '../components/EditEventModal';
 import toast from 'react-hot-toast';
 
 const EventPage = () => {
   const { eventId } = useParams();
   const { authUser } = useAuthStore();
   const { users, getUsers } = useChatStore();
+  const { currentLocation, getLocationSettings } = useLocationStore();
   const { 
     selectedEvent, 
     getEvent, 
     rsvpToEvent, 
     inviteToEvent, 
-    deleteEvent, 
+    deleteEvent,
+    updateEvent,
     isLoading 
   } = useEventStore();
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
+  const [eventDistance, setEventDistance] = useState(null);
 
   useEffect(() => {
     if (eventId) {
       getEvent(eventId);
       getUsers(); // For invite functionality
+      getLocationSettings(); // Get current location for distance calculation
     }
-  }, [eventId, getEvent, getUsers]);
+  }, [eventId, getEvent, getUsers, getLocationSettings]);
+
+  useEffect(() => {
+    if (selectedEvent && currentLocation?.coordinates) {
+      const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 3959; // Earth's radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+      };
+
+      if (selectedEvent.location?.coordinates && currentLocation.coordinates) {
+        const [eventLng, eventLat] = selectedEvent.location.coordinates;
+        const [currentLng, currentLat] = currentLocation.coordinates;
+        
+        if (eventLng && eventLat && currentLng && currentLat) {
+          const distance = calculateDistance(currentLat, currentLng, eventLat, eventLng);
+          setEventDistance(distance);
+        }
+      }
+    }
+  }, [selectedEvent, currentLocation]);
 
   const handleRSVP = async (status) => {
     try {
@@ -61,6 +95,14 @@ const EventPage = () => {
       setSelectedUser('');
     } catch (error) {
       console.error('Invite failed:', error);
+    }
+  };
+
+  const handleEdit = async (eventData) => {
+    try {
+      await updateEvent(eventId, eventData);
+    } catch (error) {
+      console.error('Edit failed:', error);
     }
   };
 
@@ -129,20 +171,19 @@ const EventPage = () => {
         </div>
       </div>
     );
-  }
+  };
 
   const event = selectedEvent;
-  // Better RSVP status detection
-  const userRSVP = event.userRSVP || (
-    event.attendees?.find(attendee => 
-      attendee.user._id === authUser._id || attendee.user === authUser._id
-    )?.status || 'no'
+  // Better RSVP status detection - check attendees array first
+  const userAttendee = event.attendees?.find(attendee => 
+    (attendee.user._id || attendee.user) === authUser._id
   );
+  const userRSVP = userAttendee ? userAttendee.status : 'no';
   const isCreator = event.creator._id === authUser._id;
   const isAttending = userRSVP === 'yes';
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20">
+    <div className="min-h-screen bg-base-200 pt-20 pb-20">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Event Header */}
         <div className="bg-base-100 rounded-xl shadow-lg p-6 mb-6">
@@ -184,6 +225,11 @@ const EventPage = () => {
                     <div>
                       <div className="font-medium">
                         {event.location.city}, {event.location.state}
+                        {eventDistance && (
+                          <span className="text-primary ml-2">
+                            ({formatDistance(eventDistance)})
+                          </span>
+                        )}
                       </div>
                       {event.location.venue && (
                         <div className="text-sm text-base-content/60">
@@ -282,7 +328,10 @@ const EventPage = () => {
 
             {isCreator && (
               <>
-                <button className="btn btn-outline">
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => setShowEditModal(true)}
+                >
                   <Edit className="w-4 h-4" />
                   Edit
                 </button>
@@ -331,6 +380,14 @@ const EventPage = () => {
             </div>
           </div>
         )}
+
+        {/* Edit Event Modal */}
+        <EditEventModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          event={event}
+          onUpdate={handleEdit}
+        />
 
         {/* Share Modal */}
         <ShareModal

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { User, MapPin, Calendar, MessageSquare, UserPlus, UserMinus } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useFollowStore } from '../store/useFollowStore';
 import { usePostStore } from '../store/usePostStore';
+import { useChatStore } from '../store/useChatStore';
 import { axiosInstance } from '../lib/axios';
 import PostCard from '../components/PostCard';
 import EventCard from '../components/EventCard';
@@ -11,9 +12,11 @@ import toast from 'react-hot-toast';
 
 const OtherUserProfilePage = () => {
   const { username } = useParams();
+  const navigate = useNavigate();
   const { authUser } = useAuthStore();
   const { followUser, unfollowUser, checkFollowStatus, followingStatus, isFollowing } = useFollowStore();
   const { getUserPosts, userPosts, isLoading: postsLoading } = usePostStore();
+  const { setSelectedUser } = useChatStore();
   const [user, setUser] = useState(null);
   const [userEvents, setUserEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,17 +68,33 @@ const OtherUserProfilePage = () => {
     try {
       if (isFollowingUser) {
         await unfollowUser(user._id);
+        // Update the user's follower count locally
+        setUser(prev => ({
+          ...prev,
+          followerCount: Math.max(0, (prev.followerCount || 0) - 1)
+        }));
       } else {
         await followUser(user._id);
+        // Update the user's follower count locally
+        setUser(prev => ({
+          ...prev,
+          followerCount: (prev.followerCount || 0) + 1
+        }));
       }
     } catch (error) {
       console.error('Follow action failed:', error);
     }
   };
 
+  const handleMessage = () => {
+    // Set the selected user in chat store and navigate to messages
+    setSelectedUser(user);
+    navigate('/messages');
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="bg-base-200 pt-20 pb-8">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="bg-base-100 rounded-xl shadow-lg p-6">
             <div className="animate-pulse">
@@ -96,7 +115,7 @@ const OtherUserProfilePage = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="bg-base-200 pt-20 pb-8">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-4">User not found</h2>
@@ -110,7 +129,7 @@ const OtherUserProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20">
+    <div className="bg-base-200 pt-20 pb-8">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Profile Header */}
         <div className="bg-base-100 rounded-xl shadow-lg p-6 mb-6">
@@ -128,7 +147,7 @@ const OtherUserProfilePage = () => {
                 <h1 className="text-2xl font-bold">{user.fullName}</h1>
                 <p className="text-base-content/60 mb-2">@{user.username}</p>
                 {user.bio && (
-                  <p className="text-base-content/80 mb-3">{user.bio}</p>
+                  <p className="text-base-content/80 mb-3 max-w-md">{user.bio}</p>
                 )}
                 <div className="flex items-center gap-4 text-sm text-base-content/60">
                   <span>{user.followerCount || 0} followers</span>
@@ -166,13 +185,13 @@ const OtherUserProfilePage = () => {
                     </>
                   )}
                 </button>
-                <Link 
-                  to={`/messages`} // You might want to implement direct message navigation
+                <button 
                   className="btn btn-outline"
+                  onClick={handleMessage}
                 >
                   <MessageSquare className="w-4 h-4" />
                   Message
-                </Link>
+                </button>
               </div>
             )}
           </div>

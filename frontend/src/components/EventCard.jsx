@@ -70,11 +70,6 @@ const EventCard = ({ event, showRSVPStatus = false }) => {
                     ({formatDistance(event.distanceInMiles)})
                   </span>
                 )}
-                {showRSVPStatus && event.distanceInMiles !== undefined && (
-                  <span className="text-primary">
-                    ({formatDistance(event.distanceInMiles)})
-                  </span>
-                )}
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />

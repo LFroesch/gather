@@ -8,6 +8,7 @@ const PostCard = ({ post }) => {
   const { toggleLike } = usePostStore();
   const { authUser } = useAuthStore();
 
+  // Check if current user has liked this post
   const isLiked = post.likes?.includes(authUser._id);
 
   const handleLike = async () => {
@@ -96,8 +97,8 @@ const PostCard = ({ post }) => {
         {/* Actions */}
         <div className="flex items-center gap-4">
           <button 
-            className={`flex items-center gap-2 btn btn-ghost btn-sm ${
-              isLiked ? 'text-red-500' : 'text-base-content/60'
+            className={`flex items-center gap-2 btn btn-ghost btn-sm transition-colors ${
+              isLiked ? 'text-red-500 hover:text-red-600' : 'text-base-content/60 hover:text-red-500'
             }`}
             onClick={handleLike}
           >
@@ -105,7 +106,7 @@ const PostCard = ({ post }) => {
             <span>{post.likes?.length || 0}</span>
           </button>
           
-          <button className="flex items-center gap-2 btn btn-ghost btn-sm text-base-content/60">
+          <button className="flex items-center gap-2 btn btn-ghost btn-sm text-base-content/60 hover:text-primary">
             <MessageCircle className="w-4 h-4" />
             <span>Comment</span>
           </button>

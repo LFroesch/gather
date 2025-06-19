@@ -56,8 +56,7 @@ const HomePage = () => {
 
   const tabs = [
     { id: 'events', label: 'Events', icon: Calendar },
-    { id: 'posts', label: 'Posts', icon: Users },
-    { id: 'messages', label: 'Messages', icon: MessageSquare }
+    { id: 'posts', label: 'Posts', icon: Users }
   ];
 
   return (
@@ -154,22 +153,6 @@ const HomePage = () => {
             )}
           </div>
         )}
-
-        {/* Messages Tab */}
-        {activeTab === 'messages' && (
-          <div className="bg-base-100 rounded-lg shadow-lg p-6">
-            <div className="text-center">
-              <MessageSquare className="w-12 h-12 mx-auto text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Messages</h3>
-              <p className="text-base-content/60 mb-4">
-                Connect with other users through direct messages
-              </p>
-              <Link to="/messages" className="btn btn-primary">
-                Open Messages
-              </Link>
-            </div>
-          </div>
-        )}
         {/* Posts Tab */}
         {activeTab === 'posts' && (
           <div className="space-y-6">
@@ -225,14 +208,6 @@ const HomePage = () => {
           <div className="fixed bottom-6 right-6">
             <Link to="/create-event" className="btn btn-primary btn-circle btn-lg shadow-lg">
               <Calendar className="w-6 h-6" />
-            </Link>
-          </div>
-        )}
-        {/* Floating Action Button for Create Post */}
-        {activeTab === 'posts' && (
-          <div className="fixed bottom-6 right-6">
-            <Link to="/create-post" className="btn btn-primary btn-circle btn-lg shadow-lg">
-              <MessageSquare className="w-6 h-6" />
             </Link>
           </div>
         )}

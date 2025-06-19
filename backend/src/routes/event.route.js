@@ -65,6 +65,80 @@ router.post("/", protectRoute, async (req, res) => {
   }
 });
 
+router.put("/:eventId", protectRoute, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { 
+      title, 
+      description, 
+      date, 
+      endDate,
+      category, 
+      maxAttendees,
+      isPrivate,
+      venue,
+      tags,
+      image 
+    } = req.body;
+    const userId = req.user._id;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.creator.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "You can only edit your own events" });
+    }
+
+    if (!title || !description || !date) {
+      return res.status(400).json({ message: "Title, description, and date are required" });
+    }
+
+    // Check if date is in the future
+    const eventDate = new Date(date);
+    if (eventDate <= new Date()) {
+      return res.status(400).json({ message: "Event date must be in the future" });
+    }
+
+    let imageUrl = event.image; // Keep existing image by default
+    if (image) {
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      imageUrl = uploadResponse.secure_url;
+    }
+
+    const updateData = {
+      title,
+      description,
+      date: new Date(date),
+      endDate: endDate ? new Date(endDate) : null,
+      category: category || 'other',
+      maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
+      isPrivate: isPrivate || false,
+      'location.venue': venue || "",
+      tags: tags || [],
+      image: imageUrl
+    };
+
+    const updatedEvent = await Event.findByIdAndUpdate(
+      eventId,
+      updateData,
+      { new: true }
+    ).populate('creator', 'fullName username profilePic');
+
+    // Add attendee count for response
+    const eventData = {
+      ...updatedEvent.toObject(),
+      attendeeCount: updatedEvent.attendeeCount
+    };
+
+    res.status(200).json(eventData);
+  } catch (error) {
+    console.log("Error in updateEvent:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 // Get events near user's search location
 router.get("/nearby", protectRoute, async (req, res) => {
   try {
@@ -137,7 +211,6 @@ router.get("/nearby", protectRoute, async (req, res) => {
   }
 });
 
-// Get user's events (RSVPd yes)
 router.get("/my-events", protectRoute, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -145,20 +218,58 @@ router.get("/my-events", protectRoute, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const events = await Event.find({
-      'attendees.user': userId,
-      'attendees.status': 'yes',
-      date: { $gte: new Date() } // Only future events
-    })
-    .populate('creator', 'fullName username profilePic')
-    .sort({ date: 1 })
-    .limit(limit)
-    .skip(skip);
+    const user = req.user;
+    const userLocation = user.currentCity.coordinates;
 
+    if (!userLocation || userLocation[0] === 0) {
+      return res.status(400).json({ message: "Location not set. Please update your location in settings." });
+    }
+
+    const events = await Event.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: userLocation
+          },
+          distanceField: "distance",
+          spherical: true
+        }
+      },
+      { $sort: { date: 1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users",
+          localField: "creator",
+          foreignField: "_id",
+          as: "creator",
+          pipeline: [
+            { $project: { fullName: 1, username: 1, profilePic: 1 } }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          creator: { $arrayElemAt: ["$creator", 0] },
+          distanceInMiles: { $divide: ["$distance", 1609.34] },
+          attendeeCount: {
+            $size: {
+              $filter: {
+                input: "$attendees",
+                cond: { $eq: ["$$this.status", "yes"] }
+              }
+            }
+          }
+        }
+      }
+    ]);
+
+    // Add userRSVP field for each event
     const eventsWithUserStatus = events.map(event => ({
-      ...event.toObject(),
-      userRSVP: event.isUserAttending(userId),
-      attendeeCount: event.attendeeCount
+      ...event,
+      userRSVP: 'yes' // Since these are events the user is attending
     }));
 
     res.status(200).json(eventsWithUserStatus);

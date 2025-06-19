@@ -250,11 +250,14 @@ const CreateEventPage = () => {
                 value={formData.venue}
                 onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
               />
-              <label className="label">
-                <span className="label-text-alt">
-                  Event will be located in: {currentLocation?.city}, {currentLocation?.state}
+              <br/>
+              {/* Location Display */}
+                <div className="alert alert-info">
+                <MapPin className="w-4 h-4" />
+                <span>
+                    This event will be located in: {currentLocation?.city}, {currentLocation?.state}
                 </span>
-              </label>
+                </div>
             </div>
 
             {/* Tags */}

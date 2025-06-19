@@ -197,7 +197,12 @@ router.post("/:postId/like", protectRoute, async (req, res) => {
     }
 
     await post.save();
-    res.status(200).json({ isLiked: !isLiked, likeCount: post.likes.length });
+    
+    res.status(200).json({ 
+      isLiked: !isLiked, 
+      likeCount: post.likes.length,
+      likes: post.likes // Send the full likes array
+    });
   } catch (error) {
     console.log("Error in likePost:", error.message);
     res.status(500).json({ message: "Internal server error" });

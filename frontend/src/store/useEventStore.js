@@ -32,6 +32,34 @@ export const useEventStore = create((set, get) => ({
       set({ isCreating: false });
     }
   },
+  
+  // Update an existing event
+  updateEvent: async (eventId, eventData) => {
+    try {
+      const res = await axiosInstance.put(`/events/${eventId}`, eventData);
+      
+      // Update event in all relevant arrays
+      const updateEvent = (event) => {
+        if (event._id === eventId) {
+          return res.data;
+        }
+        return event;
+      };
+
+      set((state) => ({
+        events: state.events.map(updateEvent),
+        nearbyEvents: state.nearbyEvents.map(updateEvent),
+        myEvents: state.myEvents.map(updateEvent),
+        selectedEvent: state.selectedEvent?._id === eventId ? res.data : state.selectedEvent
+      }));
+
+      toast.success("Event updated successfully!");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update event");
+      throw error;
+    }
+  },
 
   // Get nearby events
   getNearbyEvents: async (page = 1, forceRefresh = false) => {

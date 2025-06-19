@@ -128,11 +128,7 @@ export const usePostStore = create((set, get) => ({
         if (post._id === postId) {
           return {
             ...post,
-            likes: res.data.isLiked 
-              ? [...post.likes, "currentUser"] // Add current user
-              : post.likes.filter(id => id !== "currentUser"), // Remove current user
-            isLiked: res.data.isLiked,
-            likeCount: res.data.likeCount
+            likes: res.data.likes // Use the likes array from the backend response
           };
         }
         return post;
