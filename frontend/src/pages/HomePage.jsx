@@ -203,22 +203,6 @@ const HomePage = () => {
             </div>
           </div>
         )}
-        {/* Floating Action Button for Create Event */}
-        {activeTab === 'events' && (
-          <div className="fixed bottom-6 right-6">
-            <Link to="/create-event" className="btn btn-primary btn-circle btn-lg shadow-lg">
-              <Calendar className="w-6 h-6" />
-            </Link>
-          </div>
-        )}
-        {/* Floating Action Button for Create Post */}
-        {activeTab === 'following' && (
-          <div className="fixed bottom-6 right-6">
-            <Link to="/create-post" className="btn btn-primary btn-circle btn-lg shadow-lg">
-              <Users className="w-6 h-6" />
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -225,10 +225,8 @@ const EventPage = () => {
                     <div>
                       <div className="font-medium">
                         {event.location.city}, {event.location.state}
-                        {eventDistance && (
-                          <span className="text-primary ml-2">
-                            ({formatDistance(eventDistance)})
-                          </span>
+                        {eventDistance > 0 && (
+                          <span className="text-primary ml-2"> ({formatDistance(eventDistance)})</span>
                         )}
                       </div>
                       {event.location.venue && (

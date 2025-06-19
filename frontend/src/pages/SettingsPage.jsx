@@ -242,6 +242,7 @@ const SettingsPage = () => {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
+                      <h1 className="text-sm">City, State Code | ex: San Francisco, CA</h1>
                   
                   <div className="space-y-2">
                     <input
