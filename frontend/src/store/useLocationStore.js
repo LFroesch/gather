@@ -14,7 +14,10 @@ export const useLocationStore = create((set, get) => ({
     try {
       const res = await axiosInstance.put("/geo/current-location", locationData);
       set({ currentLocation: res.data.currentCity });
-      toast.success("Location updated successfully!");
+      toast.success("Location updated successfully!", {
+        id: 'location-update',
+        duration: 3000,
+      });
       
       // Dispatch event to notify other components
       window.dispatchEvent(new CustomEvent('locationChanged', { 
@@ -23,7 +26,10 @@ export const useLocationStore = create((set, get) => ({
       
       return res.data.currentCity;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to update current location");
+      toast.error(error.response?.data?.message || "Failed to update current location", {
+        id: 'location-update-error',
+        duration: 4000,
+      });
       throw error;
     } finally {
       set({ isUpdating: false });
@@ -62,7 +68,10 @@ export const useLocationStore = create((set, get) => ({
       
       return res.data.locationSettings;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to update location settings");
+      toast.error(error.response?.data?.message || "Failed to update location settings", {
+        id: 'location-settings-error',
+        duration: 4000,
+      });
       throw error;
     } finally {
       set({ isUpdating: false });

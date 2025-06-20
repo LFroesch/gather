@@ -20,6 +20,7 @@ const OtherUserProfilePage = () => {
   const [user, setUser] = useState(null);
   const [userEvents, setUserEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('posts');
 
   const isFollowingUser = followingStatus[user?._id] || false;
@@ -55,12 +56,15 @@ const OtherUserProfilePage = () => {
 
   const fetchUserEvents = async () => {
     try {
-      // Since we don't have a specific endpoint for user's events they're attending,
-      // we'll use the my-events endpoint when viewing our own profile
-      // For now, we'll show a placeholder
-      setUserEvents([]);
+      setEventsLoading(true);
+      const res = await axiosInstance.get(`/events/user/${user._id}/rsvped`);
+      setUserEvents(res.data);
     } catch (error) {
       console.error('Failed to fetch user events:', error);
+      toast.error('Failed to fetch events');
+      setUserEvents([]);
+    } finally {
+      setEventsLoading(false);
     }
   };
 
@@ -240,15 +244,23 @@ const OtherUserProfilePage = () => {
 
           {activeTab === 'events' && (
             <>
-              {userEvents.map((event) => (
-                <EventCard key={event._id} event={event} showRSVPStatus />
-              ))}
-              {userEvents.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-base-content/60">
-                    {user.fullName} isn't attending any public events
-                  </p>
+              {eventsLoading ? (
+                <div className="flex justify-center py-8">
+                  <span className="loading loading-spinner loading-lg"></span>
                 </div>
+              ) : (
+                <>
+                  {userEvents.map((event) => (
+                    <EventCard key={event._id} event={event} showRSVPStatus />
+                  ))}
+                  {userEvents.length === 0 && (
+                    <div className="text-center py-8">
+                      <p className="text-base-content/60">
+                        {user.fullName} isn't attending any public events
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

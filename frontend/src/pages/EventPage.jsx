@@ -4,7 +4,8 @@ import {
   Calendar, 
   MapPin, 
   Users, 
-  Clock, 
+  Clock,
+  Lock, 
   User, 
   UserPlus,
   Share,
@@ -202,6 +203,12 @@ const EventPage = () => {
                 <div className={`badge ${getCategoryColor(event.category)}`}>
                   {event.category}
                 </div>
+                  {event.isPrivate && (
+                    <div className="badge badge-warning gap-2">
+                      <Lock className="w-4 h-4" />
+                      Invite Only Event
+                    </div>
+                  )}
               </div>
 
               <p className="text-base-content/80 text-lg mb-4">{event.description}</p>

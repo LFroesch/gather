@@ -12,15 +12,19 @@ import NotificationsPage from "./pages/NotificationsPage"
 import MessagingPage from "./pages/MessagingPage"
 import CreateEventPage from "./pages/CreateEventPage"
 import CreatePostPage from "./pages/CreatePostPage"
+import PostPage from "./pages/PostPage"
+import HelpPage from "./pages/HelpPage"
 import Footer from "./components/Footer"
 import { useAuthStore } from "./store/useAuthStore"
 import { useEffect } from "react"
 import { Loader } from "lucide-react"
 import { Toaster } from "react-hot-toast"
 import { useThemeStore } from "./store/useThemeStore"
+import { useLocationStore } from "./store/useLocationStore"
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore()
+  const { initializeLocation } = useLocationStore()
   const { theme } = useThemeStore()
 
   useEffect(() => {
@@ -28,6 +32,12 @@ const App = () => {
   }, [checkAuth])
 
   console.log({ authUser })
+
+  useEffect(() => {
+    if (authUser) {
+      initializeLocation()
+    }
+  }, [authUser, initializeLocation])
 
   if (isCheckingAuth && !authUser)
     return (
@@ -51,6 +61,8 @@ const App = () => {
         <Route path="/messages" element={authUser ? <MessagingPage /> : <Navigate to="/login" />} />
         <Route path="/create-event" element={authUser ? <CreateEventPage /> : <Navigate to="/login" />} />
         <Route path="/create-post" element={authUser ? <CreatePostPage /> : <Navigate to="/login" />} />
+        <Route path="/posts/:postId" element={authUser ? <PostPage /> : <Navigate to="/login" />} />
+        <Route path="/help" element={<HelpPage />} />
       </Routes>
       <Footer/>
       <Toaster/>

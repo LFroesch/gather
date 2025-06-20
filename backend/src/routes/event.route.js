@@ -211,6 +211,7 @@ router.get("/nearby", protectRoute, async (req, res) => {
   }
 });
 
+// Events logged in user is attending
 router.get("/my-events", protectRoute, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -218,63 +219,132 @@ router.get("/my-events", protectRoute, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const user = req.user;
-    const userLocation = user.currentCity.coordinates;
+    // Find all events where the user has RSVP'd "yes" - simple query, no aggregation
+    const events = await Event.find({
+      "attendees.user": userId,
+      "attendees.status": "yes" || "maybe",
+    })
+    .populate('creator', 'fullName username profilePic')
+    .sort({ date: 1 })
+    .skip(skip)
+    .limit(limit);
 
-    if (!userLocation || userLocation[0] === 0) {
-      return res.status(400).json({ message: "Location not set. Please update your location in settings." });
+    if (!events) {
+      return res.status(200).json([]);
     }
 
-    const events = await Event.aggregate([
-      {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: userLocation
-          },
-          distanceField: "distance",
-          spherical: true
-        }
-      },
-      { $sort: { date: 1 } },
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: "users",
-          localField: "creator",
-          foreignField: "_id",
-          as: "creator",
-          pipeline: [
-            { $project: { fullName: 1, username: 1, profilePic: 1 } }
-          ]
-        }
-      },
-      {
-        $addFields: {
-          creator: { $arrayElemAt: ["$creator", 0] },
-          distanceInMiles: { $divide: ["$distance", 1609.34] },
-          attendeeCount: {
-            $size: {
-              $filter: {
-                input: "$attendees",
-                cond: { $eq: ["$$this.status", "yes"] }
-              }
-            }
-          }
-        }
+    const user = req.user;
+    const userLocation = user.currentCity?.coordinates;
+
+    // Calculate distance and attendee count for each event
+    const eventsWithDetails = events.map(event => {
+      let distanceInMiles = 0;
+      
+      // Calculate distance if both user and event have coordinates
+      if (userLocation && userLocation[0] !== 0 && event.location?.coordinates) {
+        const [userLng, userLat] = userLocation;
+        const [eventLng, eventLat] = event.location.coordinates;
+        
+        // Haversine formula
+        const R = 3959; // Earth's radius in miles
+        const dLat = (eventLat - userLat) * Math.PI / 180;
+        const dLon = (eventLng - userLng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(userLat * Math.PI / 180) * Math.cos(eventLat * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        distanceInMiles = R * c;
       }
-    ]);
 
-    // Add userRSVP field for each event
-    const eventsWithUserStatus = events.map(event => ({
-      ...event,
-      userRSVP: 'yes' // Since these are events the user is attending
-    }));
+      // Count attendees with "yes" status
+      const attendeeCount = event.attendees.filter(attendee => 
+        attendee.status === 'yes'
+      ).length;
 
-    res.status(200).json(eventsWithUserStatus);
+      return {
+        ...event.toObject(),
+        userRSVP: 'yes',
+        distanceInMiles,
+        attendeeCount
+      };
+    });
+
+    res.status(200).json(eventsWithDetails);
   } catch (error) {
     console.log("Error in getMyEvents:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Get events where a specific user has RSVP'd
+router.get("/user/:userId/rsvped", protectRoute, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Find all public events where the specified user has RSVP'd "yes" or "maybe"
+    const events = await Event.find({
+      "attendees.user": userId,
+      "attendees.status": { $in: ["yes", "maybe"] },
+      isPrivate: false // Only show public events when viewing other users
+    })
+    .populate('creator', 'fullName username profilePic')
+    .sort({ date: 1 })
+    .skip(skip)
+    .limit(limit);
+
+    if (!events) {
+      return res.status(200).json([]);
+    }
+
+    const requestingUser = req.user;
+    const userLocation = requestingUser.currentCity?.coordinates;
+
+    // Calculate distance and attendee count for each event
+    const eventsWithDetails = events.map(event => {
+      let distanceInMiles = 0;
+      
+      // Calculate distance if both requesting user and event have coordinates
+      if (userLocation && userLocation[0] !== 0 && event.location?.coordinates) {
+        const [userLng, userLat] = userLocation;
+        const [eventLng, eventLat] = event.location.coordinates;
+        
+        // Haversine formula
+        const R = 3959; // Earth's radius in miles
+        const dLat = (eventLat - userLat) * Math.PI / 180;
+        const dLon = (eventLng - userLng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(userLat * Math.PI / 180) * Math.cos(eventLat * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        distanceInMiles = R * c;
+      }
+
+      // Count attendees with "yes" status
+      const attendeeCount = event.attendees.filter(attendee => 
+        attendee.status === 'yes'
+      ).length;
+
+      // Find the target user's RSVP status
+      const targetUserRSVP = event.attendees.find(attendee => 
+        attendee.user.toString() === userId.toString()
+      );
+
+      return {
+        ...event.toObject(),
+        userRSVP: targetUserRSVP ? targetUserRSVP.status : null,
+        distanceInMiles,
+        attendeeCount
+      };
+    });
+
+    res.status(200).json(eventsWithDetails);
+  } catch (error) {
+    console.log("Error in getUserEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -346,6 +416,9 @@ router.post("/:eventId/rsvp", protectRoute, async (req, res) => {
 
     await event.save();
 
+    // Populate attendees for the response
+    await event.populate('attendees.user', 'fullName username profilePic');
+
     // Create notification for event creator (if not own event)
     if (event.creator.toString() !== userId.toString() && status === 'yes') {
       const notification = new Notification({
@@ -361,7 +434,8 @@ router.post("/:eventId/rsvp", protectRoute, async (req, res) => {
     res.status(200).json({ 
       message: `RSVP updated to ${status}`,
       userRSVP: status,
-      attendeeCount: event.attendees.filter(a => a.status === 'yes').length
+      attendeeCount: event.attendees.filter(a => a.status === 'yes').length,
+      attendees: event.attendees
     });
   } catch (error) {
     console.log("Error in rsvpEvent:", error.message);

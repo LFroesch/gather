@@ -4,6 +4,7 @@ import { axiosInstance } from "../lib/axios";
 
 export const usePostStore = create((set, get) => ({
   posts: [],
+  myPosts: [],
   followingPosts: [],
   nearbyPosts: [],
   userPosts: [],
@@ -32,7 +33,7 @@ export const usePostStore = create((set, get) => ({
       set({ isCreating: false });
     }
   },
-
+  
   // Get following feed
   getFollowingPosts: async (page = 1) => {
     set({ isLoading: true });
@@ -81,7 +82,17 @@ export const usePostStore = create((set, get) => ({
       set({ isLoading: false });
     }
   },
-
+  // Get Logged-in user's posts
+  getMyPosts: async () => {
+    try {
+      set({ isLoading: true });
+      const res = await axiosInstance.get("/posts/my-posts");
+      set({ myPosts: res.data, isLoading: false });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to fetch your posts");
+      set({ isLoading: false });
+    }
+  },
   // Get user's posts
   getUserPosts: async (userId, page = 1) => {
     set({ isLoading: true });

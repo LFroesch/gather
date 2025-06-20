@@ -141,6 +141,64 @@ router.get("/nearby", protectRoute, async (req, res) => {
   }
 });
 
+// get logged in users posts
+router.get("/my-posts", protectRoute, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const posts = await Post.find({ author: userId })
+      .populate('author', 'fullName username profilePic')
+      .sort({ createdAt: -1 }) // Most recent first
+      .skip(skip)
+      .limit(limit);
+
+    if (!posts) {
+      return res.status(200).json([]);
+    }
+
+    const user = req.user;
+    const userLocation = user.currentCity?.coordinates;
+
+    // Add distance and interaction data for each post
+    const postsWithDetails = posts.map(post => {
+      let distanceInMiles = 0;
+      
+      // Calculate distance if both user and post have coordinates
+      if (userLocation && userLocation[0] !== 0 && post.location?.coordinates) {
+        const [userLng, userLat] = userLocation;
+        const [postLng, postLat] = post.location.coordinates;
+        
+        // Haversine formula
+        const R = 3959; // Earth's radius in miles
+        const dLat = (postLat - userLat) * Math.PI / 180;
+        const dLon = (postLng - userLng) * Math.PI / 180;
+        const a = 
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(userLat * Math.PI / 180) * Math.cos(postLat * Math.PI / 180) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        distanceInMiles = R * c;
+      }
+
+      return {
+        ...post.toObject(),
+        distanceInMiles,
+        likeCount: post.likes?.length || 0,
+        commentCount: post.comments?.length || 0,
+        isLiked: post.likes?.includes(userId) || false
+      };
+    });
+
+    res.status(200).json(postsWithDetails);
+  } catch (error) {
+    console.log("Error in getMyPosts:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 // Get posts by user
 router.get("/user/:userId", protectRoute, async (req, res) => {
   try {
@@ -233,3 +291,22 @@ router.delete("/:postId", protectRoute, async (req, res) => {
 });
 
 export default router;
+
+router.get("/:postId", protectRoute, async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    const post = await Post.findById(postId)
+      .populate('author', 'fullName username profilePic')
+      .populate('event', 'title');
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.status(200).json(post);
+  } catch (error) {
+    console.log("Error in getPost:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});

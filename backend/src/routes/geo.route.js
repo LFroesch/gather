@@ -113,7 +113,7 @@ router.get("/search-cities", protectRoute, async (req, res) => {
     const { query } = req.query;
     
     if (!query || query.length < 2) {
-      return res.status(400).json({ message: "Query must be at least 2 characters" });
+      return res.status(400).json({ message: "Search query must be at least 2 characters" });
     }
 
     // Use Nominatim API for real city search - Limited to North America
@@ -194,6 +194,7 @@ router.get("/search-cities", protectRoute, async (req, res) => {
     console.log("Error in searchCities:", error.message);
     
     // Fallback to mock data if geocoding fails (USA cities only)
+    const { query } = req.query; // FIX: Access query from req.query here
     const mockCities = [
       { city: "San Francisco", state: "CA", country: "USA", coordinates: [-122.4194, 37.7749] },
       { city: "Los Angeles", state: "CA", country: "USA", coordinates: [-118.2437, 34.0522] },

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOut, MessageSquare, Settings, User, Bell, Plus, Calendar } from "lucide-react";
+import { LogOut, MessageSquare, Settings, User, Bell, Plus, Calendar, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
 const Navbar = () => {
@@ -85,6 +85,12 @@ const Navbar = () => {
                       <Link to="/settings" className="gap-2">
                         <Settings className="w-4 h-4" />
                         Settings
+                      </Link>
+                    </li>
+                    <li>
+                      <Link to="/help" className="gap-2">
+                        <HelpCircle className="w-4 h-4" />
+                        Help
                       </Link>
                     </li>
                     <li>

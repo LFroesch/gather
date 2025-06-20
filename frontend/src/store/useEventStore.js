@@ -36,7 +36,7 @@ export const useEventStore = create((set, get) => ({
   // Update an existing event
   updateEvent: async (eventId, eventData) => {
     try {
-      const res = await axiosInstance.put(`/events/${eventId}`, eventData);
+      const res = await axiosInstance.post(`/events/${eventId}`, eventData);
       
       // Update event in all relevant arrays
       const updateEvent = (event) => {
@@ -144,13 +144,18 @@ export const useEventStore = create((set, get) => ({
     try {
       const res = await axiosInstance.post(`/events/${eventId}/rsvp`, { status });
       
+      // Get the updated event data from the server
+      const updatedEventRes = await axiosInstance.get(`/events/${eventId}`);
+      const updatedEvent = updatedEventRes.data;
+      
       // Update event in all relevant arrays
       const updateEvent = (event) => {
         if (event._id === eventId) {
           return {
             ...event,
             userRSVP: status,
-            attendeeCount: res.data.attendeeCount
+            attendeeCount: updatedEvent.attendeeCount,
+            attendees: updatedEvent.attendees
           };
         }
         return event;
@@ -163,11 +168,19 @@ export const useEventStore = create((set, get) => ({
           ? state.myEvents.map(updateEvent)
           : state.myEvents.filter(event => event._id !== eventId),
         selectedEvent: state.selectedEvent?._id === eventId 
-          ? { ...state.selectedEvent, userRSVP: status, attendeeCount: res.data.attendeeCount }
+          ? { 
+              ...state.selectedEvent, 
+              userRSVP: status, 
+              attendeeCount: updatedEvent.attendeeCount,
+              attendees: updatedEvent.attendees 
+            }
           : state.selectedEvent
       }));
 
-      toast.success(`RSVP updated to ${status}`);
+      toast.success(`RSVP updated to ${status}`,{
+        id: 'rsvp-update',
+        duration: 4000,
+      });
       return res.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update RSVP");

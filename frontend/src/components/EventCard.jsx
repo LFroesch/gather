@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistance } from '../lib/utils';
 
@@ -42,6 +42,12 @@ const EventCard = ({ event, showRSVPStatus = false }) => {
               <div className={`badge ${getCategoryColor(event.category)}`}>
                 {event.category}
               </div>
+              {event.isPrivate && (
+                <div className="badge badge-warning gap-1">
+                  <Lock className="w-3 h-3" />
+                  Invite Only
+                </div>
+              )}
               {showRSVPStatus && (
                 <div className="badge badge-success">
                   Attending
