@@ -79,27 +79,6 @@ App runs on `http://localhost:5173` 🚀
 - Image upload and sharing
 - Search functionality for users and locations
 
-## Project Structure
-```
-event-chat/
-├── backend/
-│   ├── src/
-│   │   ├── controllers/     # Route handlers
-│   │   ├── models/          # MongoDB schemas
-│   │   ├── routes/          # API routes
-│   │   ├── middleware/      # Auth & validation
-│   │   └── lib/             # Utils & config
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── pages/          # Page components
-│   │   ├── store/          # Zustand state management
-│   │   └── lib/            # Utils & API client
-│   └── package.json
-└── README.md
-```
-
 ## API Endpoints
 
 ### Authentication
@@ -132,30 +111,3 @@ event-chat/
 - `PUT /api/geo/current-location` - Update current location
 - `GET /api/geo/search-cities` - Search for cities
 - `PUT /api/geo/settings` - Update location settings
-
-## Database Schema
-
-### User Model
-- Authentication (email, password, username)
-- Profile (name, bio, profile picture)
-- Location settings and current city
-- Following/followers system
-
-### Event Model
-- Event details (title, description, date, category)
-- Location with geospatial coordinates
-- Attendee management with RSVP status
-- Creator and privacy settings
-
-### Post Model
-- Content and optional image
-- Author and location information
-- Like system and event association
-
-### Message Model
-- Real-time messaging between users
-- Text and image support
-- Socket.IO integration
-
----
-*Educational project demonstrating modern full-stack development with location-based features*
