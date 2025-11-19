@@ -33,10 +33,8 @@ const validateForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const success = validateForm();
-    console.log("Form validation result:", success); // ADD THIS LINE
-    console.log("Form data:", formData); // ADD THIS LINE
     if (success === true) signup(formData);
-    };
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

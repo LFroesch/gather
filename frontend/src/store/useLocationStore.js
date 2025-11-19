@@ -86,7 +86,7 @@ export const useLocationStore = create((set, get) => ({
       const res = await axiosInstance.get(`/geo/search-cities?query=${encodeURIComponent(query)}`);
       return res.data;
     } catch (error) {
-      console.log("Error searching cities:", error);
+      console.error("Error searching cities:", error);
       return [];
     }
   },
@@ -97,7 +97,7 @@ export const useLocationStore = create((set, get) => ({
       const res = await axiosInstance.post("/geo/calculate-distance", { point1, point2 });
       return res.data;
     } catch (error) {
-      console.log("Error calculating distance:", error);
+      console.error("Error calculating distance:", error);
       return null;
     }
   },
@@ -122,7 +122,7 @@ export const useLocationStore = create((set, get) => ({
       // Get saved settings
       await get().getLocationSettings();
     } catch (error) {
-      console.log("Location initialization failed:", error);
+      console.error("Location initialization failed:", error);
     }
   }
 }));

@@ -1,11 +1,26 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOut, MessageSquare, Settings, User, Bell, Plus, Calendar, HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { LogOut, MessageSquare, Settings, User, Bell, Plus, Calendar, HelpCircle, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import SearchModal from "./SearchModal";
 
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Keyboard shortcut for search (Cmd/Ctrl + K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <header
@@ -23,6 +38,15 @@ const Navbar = () => {
           {/* Center Navigation (only show when logged in) */}
           {authUser && (
             <nav className="hidden md:flex items-center gap-1">
+              <button
+                onClick={() => setShowSearch(true)}
+                className="btn btn-ghost btn-sm gap-2"
+                title="Search (Cmd/Ctrl + K)"
+              >
+                <Search className="w-4 h-4" />
+                <span className="hidden lg:inline text-base-content/60">Search...</span>
+                <kbd className="kbd kbd-xs hidden lg:inline-flex">⌘K</kbd>
+              </button>
               <Link to="/" className="btn btn-ghost btn-sm">
                 Home
               </Link>
@@ -117,6 +141,9 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+
+      {/* Search Modal */}
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </header>
   );
 };

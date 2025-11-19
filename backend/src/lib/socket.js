@@ -51,7 +51,7 @@ io.on("connection", (socket) => {
         io.to(recipientSocketId).emit("newNotification", notification);
       }
     } catch (error) {
-      console.log("Error in sendNotification:", error);
+      console.error("Error in sendNotification:", error);
     }
   });
 

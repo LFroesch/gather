@@ -1,11 +1,13 @@
 import express from 'express';
 import { protectRoute } from '../middleware/protectRoute.js';
 import User from '../models/user.model.js';
+import { geoLimiter } from '../middleware/rateLimiter.js';
+import { validateLocationUpdate, validateSearchRadius } from '../middleware/validation.js';
 
 const router = express.Router();
 
 // Update user's current location
-router.put("/current-location", protectRoute, async (req, res) => {
+router.put("/current-location", protectRoute, validateLocationUpdate, async (req, res) => {
   try {
     const { city, state, country, coordinates } = req.body;
     const userId = req.user._id;
@@ -34,7 +36,7 @@ router.put("/current-location", protectRoute, async (req, res) => {
       currentCity: updatedUser.currentCity
     });
   } catch (error) {
-    console.log("Error in updateCurrentLocation:", error.message);
+    console.error("Error in updateCurrentLocation:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -85,7 +87,7 @@ router.put("/settings", protectRoute, async (req, res) => {
       locationSettings: updatedUser.locationSettings
     });
   } catch (error) {
-    console.log("Error in updateLocationSettings:", error.message);
+    console.error("Error in updateLocationSettings:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -102,13 +104,13 @@ router.get("/settings", protectRoute, async (req, res) => {
       currentCity: user.currentCity
     });
   } catch (error) {
-    console.log("Error in getLocationSettings:", error.message);
+    console.error("Error in getLocationSettings:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // Search cities using OpenStreetMap Nominatim (FREE) - Limited to USA/North America
-router.get("/search-cities", protectRoute, async (req, res) => {
+router.get("/search-cities", geoLimiter, protectRoute, async (req, res) => {
   try {
     const { query } = req.query;
     
@@ -191,7 +193,7 @@ router.get("/search-cities", protectRoute, async (req, res) => {
 
     res.status(200).json(cities);
   } catch (error) {
-    console.log("Error in searchCities:", error.message);
+    console.error("Error in searchCities:", error.message);
     
     // Fallback to mock data if geocoding fails (USA cities only)
     const { query } = req.query; // FIX: Access query from req.query here
@@ -252,7 +254,7 @@ router.post("/calculate-distance", protectRoute, async (req, res) => {
       distanceKm: Math.round(distanceKm * 10) / 10
     });
   } catch (error) {
-    console.log("Error in calculateDistance:", error.message);
+    console.error("Error in calculateDistance:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });

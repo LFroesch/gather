@@ -31,8 +31,6 @@ const App = () => {
     checkAuth()
   }, [checkAuth])
 
-  console.log({ authUser })
-
   useEffect(() => {
     if (authUser) {
       initializeLocation()

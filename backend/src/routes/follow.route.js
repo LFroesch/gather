@@ -57,7 +57,7 @@ router.post("/follow/:userId", protectRoute, async (req, res) => {
 
     res.status(200).json({ message: "Successfully followed user" });
   } catch (error) {
-    console.log("Error in followUser:", error.message);
+    console.error("Error in followUser:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -84,7 +84,7 @@ router.post("/unfollow/:userId", protectRoute, async (req, res) => {
 
     res.status(200).json({ message: "Successfully unfollowed user" });
   } catch (error) {
-    console.log("Error in unfollowUser:", error.message);
+    console.error("Error in unfollowUser:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -113,7 +113,7 @@ router.get("/followers/:userId", protectRoute, async (req, res) => {
       total: user.followers.length
     });
   } catch (error) {
-    console.log("Error in getFollowers:", error.message);
+    console.error("Error in getFollowers:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -142,7 +142,7 @@ router.get("/following/:userId", protectRoute, async (req, res) => {
       total: user.following.length
     });
   } catch (error) {
-    console.log("Error in getFollowing:", error.message);
+    console.error("Error in getFollowing:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -160,7 +160,7 @@ router.get("/status/:userId", protectRoute, async (req, res) => {
 
     res.status(200).json({ isFollowing: !!isFollowing });
   } catch (error) {
-    console.log("Error in getFollowStatus:", error.message);
+    console.error("Error in getFollowStatus:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -193,7 +193,7 @@ router.get("/notifications", protectRoute, async (req, res) => {
       unreadCount
     });
   } catch (error) {
-    console.log("Error in getNotifications:", error.message);
+    console.error("Error in getNotifications:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -216,7 +216,7 @@ router.put("/notifications/:notificationId/read", protectRoute, async (req, res)
 
     res.status(200).json({ message: "Notification marked as read" });
   } catch (error) {
-    console.log("Error in markNotificationRead:", error.message);
+    console.error("Error in markNotificationRead:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -233,7 +233,7 @@ router.put("/notifications/read-all", protectRoute, async (req, res) => {
 
     res.status(200).json({ message: "All notifications marked as read" });
   } catch (error) {
-    console.log("Error in markAllNotificationsRead:", error.message);
+    console.error("Error in markAllNotificationsRead:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -255,7 +255,7 @@ router.delete("/notifications/:notificationId", protectRoute, async (req, res) =
 
     res.status(200).json({ message: "Notification deleted" });
   } catch (error) {
-    console.log("Error in deleteNotification:", error.message);
+    console.error("Error in deleteNotification:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });

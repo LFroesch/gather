@@ -1,19 +1,21 @@
 import express from 'express';
-import { 
-  checkAuth, 
-  login, 
-  logout, 
-  signup, 
-  updateProfile, 
-  getUser, 
-  searchUsers 
+import {
+  checkAuth,
+  login,
+  logout,
+  signup,
+  updateProfile,
+  getUser,
+  searchUsers
 } from '../controllers/auth.controller.js';
 import { protectRoute } from '../middleware/protectRoute.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import { validateSignup, validateLogin } from '../middleware/validation.js';
 
 const router = express.Router();
 
-router.post("/signup", signup);
-router.post("/login", login);
+router.post("/signup", authLimiter, validateSignup, signup);
+router.post("/login", authLimiter, validateLogin, login);
 router.post("/logout", logout);
 
 router.put("/update-profile", protectRoute, updateProfile);

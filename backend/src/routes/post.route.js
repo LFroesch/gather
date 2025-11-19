@@ -4,11 +4,13 @@ import Post from '../models/post.model.js';
 import User from '../models/user.model.js';
 import { Notification } from '../models/follow.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import { createContentLimiter } from '../middleware/rateLimiter.js';
+import { validateCreatePost } from '../middleware/validation.js';
 
 const router = express.Router();
 
 // Create a new post
-router.post("/", protectRoute, async (req, res) => {
+router.post("/", createContentLimiter, protectRoute, validateCreatePost, async (req, res) => {
   try {
     const { content, image, type = 'general', eventId } = req.body;
     const userId = req.user._id;
@@ -41,7 +43,7 @@ router.post("/", protectRoute, async (req, res) => {
 
     res.status(201).json(newPost);
   } catch (error) {
-    console.log("Error in createPost:", error.message);
+    console.error("Error in createPost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -64,7 +66,7 @@ router.get("/following", protectRoute, async (req, res) => {
 
     res.status(200).json(posts);
   } catch (error) {
-    console.log("Error in getFollowingPosts:", error.message);
+    console.error("Error in getFollowingPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -136,7 +138,7 @@ router.get("/nearby", protectRoute, async (req, res) => {
 
     res.status(200).json(posts);
   } catch (error) {
-    console.log("Error in getNearbyPosts:", error.message);
+    console.error("Error in getNearbyPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -194,7 +196,7 @@ router.get("/my-posts", protectRoute, async (req, res) => {
 
     res.status(200).json(postsWithDetails);
   } catch (error) {
-    console.log("Error in getMyPosts:", error.message);
+    console.error("Error in getMyPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -216,7 +218,7 @@ router.get("/user/:userId", protectRoute, async (req, res) => {
 
     res.status(200).json(posts);
   } catch (error) {
-    console.log("Error in getUserPosts:", error.message);
+    console.error("Error in getUserPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -262,7 +264,7 @@ router.post("/:postId/like", protectRoute, async (req, res) => {
       likes: post.likes // Send the full likes array
     });
   } catch (error) {
-    console.log("Error in likePost:", error.message);
+    console.error("Error in likePost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -285,7 +287,7 @@ router.delete("/:postId", protectRoute, async (req, res) => {
     await Post.findByIdAndDelete(postId);
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
-    console.log("Error in deletePost:", error.message);
+    console.error("Error in deletePost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -306,7 +308,7 @@ router.get("/:postId", protectRoute, async (req, res) => {
 
     res.status(200).json(post);
   } catch (error) {
-    console.log("Error in getPost:", error.message);
+    console.error("Error in getPost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });

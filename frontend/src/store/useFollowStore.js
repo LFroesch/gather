@@ -64,7 +64,7 @@ export const useFollowStore = create((set, get) => ({
 
       return res.data.isFollowing;
     } catch (error) {
-      console.log("Error checking follow status:", error);
+      console.error("Error checking follow status:", error);
       return false;
     }
   },

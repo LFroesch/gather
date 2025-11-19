@@ -3,11 +3,13 @@ import { protectRoute } from '../middleware/protectRoute.js';
 import Event from '../models/event.model.js';
 import { Notification } from '../models/follow.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import { createContentLimiter } from '../middleware/rateLimiter.js';
+import { validateCreateEvent, validateUpdateEvent, validateRSVP } from '../middleware/validation.js';
 
 const router = express.Router();
 
 // Create a new event
-router.post("/", protectRoute, async (req, res) => {
+router.post("/", createContentLimiter, protectRoute, validateCreateEvent, async (req, res) => {
   try {
     const { 
       title, 
@@ -60,12 +62,12 @@ router.post("/", protectRoute, async (req, res) => {
 
     res.status(201).json(newEvent);
   } catch (error) {
-    console.log("Error in createEvent:", error.message);
+    console.error("Error in createEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
-router.put("/:eventId", protectRoute, async (req, res) => {
+router.put("/:eventId", protectRoute, validateUpdateEvent, async (req, res) => {
   try {
     const { eventId } = req.params;
     const { 
@@ -134,7 +136,7 @@ router.put("/:eventId", protectRoute, async (req, res) => {
 
     res.status(200).json(eventData);
   } catch (error) {
-    console.log("Error in updateEvent:", error.message);
+    console.error("Error in updateEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -206,7 +208,7 @@ router.get("/nearby", protectRoute, async (req, res) => {
 
     res.status(200).json(events);
   } catch (error) {
-    console.log("Error in getNearbyEvents:", error.message);
+    console.error("Error in getNearbyEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -272,7 +274,7 @@ router.get("/my-events", protectRoute, async (req, res) => {
 
     res.status(200).json(eventsWithDetails);
   } catch (error) {
-    console.log("Error in getMyEvents:", error.message);
+    console.error("Error in getMyEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -344,7 +346,7 @@ router.get("/user/:userId/rsvped", protectRoute, async (req, res) => {
 
     res.status(200).json(eventsWithDetails);
   } catch (error) {
-    console.log("Error in getUserEvents:", error.message);
+    console.error("Error in getUserEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -371,13 +373,13 @@ router.get("/:eventId", protectRoute, async (req, res) => {
 
     res.status(200).json(eventData);
   } catch (error) {
-    console.log("Error in getEvent:", error.message);
+    console.error("Error in getEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // RSVP to an event
-router.post("/:eventId/rsvp", protectRoute, async (req, res) => {
+router.post("/:eventId/rsvp", protectRoute, validateRSVP, async (req, res) => {
   try {
     const { eventId } = req.params;
     const { status } = req.body; // 'yes', 'no', 'maybe'
@@ -438,7 +440,7 @@ router.post("/:eventId/rsvp", protectRoute, async (req, res) => {
       attendees: event.attendees
     });
   } catch (error) {
-    console.log("Error in rsvpEvent:", error.message);
+    console.error("Error in rsvpEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -473,7 +475,7 @@ router.post("/:eventId/invite", protectRoute, async (req, res) => {
 
     res.status(200).json({ message: "Invitation sent successfully" });
   } catch (error) {
-    console.log("Error in inviteToEvent:", error.message);
+    console.error("Error in inviteToEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -496,7 +498,7 @@ router.delete("/:eventId", protectRoute, async (req, res) => {
     await Event.findByIdAndDelete(eventId);
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
-    console.log("Error in deleteEvent:", error.message);
+    console.error("Error in deleteEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
