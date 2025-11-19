@@ -146,17 +146,44 @@ router.get("/nearby", protectRoute, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    // Filtering options
+    const { category, sortBy = 'date', tag } = req.query;
+
     const user = req.user;
-    const searchLocation = user.locationSettings.autoDetectLocation 
-      ? user.currentCity.coordinates 
+    const searchLocation = user.locationSettings.autoDetectLocation
+      ? user.currentCity.coordinates
       : user.locationSettings.searchLocation.coordinates;
-    
+
     const radiusInMiles = user.locationSettings.nearMeRadius || 25;
     const radiusInMeters = radiusInMiles * 1609.34;
 
     if (!searchLocation || searchLocation[0] === 0) {
       return res.status(400).json({ message: "Location not set. Please update your location in settings." });
     }
+
+    // Build query object
+    const query = {
+      date: { $gte: new Date() },
+      isPrivate: false
+    };
+
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+
+    if (tag) {
+      query.tags = tag;
+    }
+
+    // Determine sort order
+    const sortOptions = {
+      date: { date: 1 },
+      distance: { distance: 1 },
+      attendees: { attendeeCount: -1 },
+      recent: { createdAt: -1 }
+    };
+
+    const sortStage = sortOptions[sortBy] || sortOptions.date;
 
     const events = await Event.aggregate([
       {
@@ -168,15 +195,9 @@ router.get("/nearby", protectRoute, async (req, res) => {
         distanceField: "distance",
         maxDistance: radiusInMeters,
         spherical: true,
-        query: {
-            date: { $gte: new Date() },
-            isPrivate: false
-        }
+        query
         }
     },
-      { $sort: { date: 1 } }, // Sort by event date
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "users",
@@ -201,10 +222,40 @@ router.get("/nearby", protectRoute, async (req, res) => {
             }
           }
         }
-      }
+      },
+      { $sort: sortStage },
+      { $skip: skip },
+      { $limit: limit }
     ]);
 
-    res.status(200).json(events);
+    // Count total for pagination
+    const totalPipeline = await Event.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: searchLocation
+          },
+          distanceField: "distance",
+          maxDistance: radiusInMeters,
+          spherical: true,
+          query
+        }
+      },
+      { $count: "total" }
+    ]);
+
+    const total = totalPipeline[0]?.total || 0;
+
+    res.status(200).json({
+      events,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.log("Error in getNearbyEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });

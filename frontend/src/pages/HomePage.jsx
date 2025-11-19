@@ -5,6 +5,8 @@ import { usePostStore } from '../store/usePostStore';
 import { Link } from 'react-router-dom';
 import EventCard from '../components/EventCard';
 import PostCard from '../components/PostCard';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState('events');
@@ -103,9 +105,7 @@ const HomePage = () => {
             {/* Events List */}
             <div className="space-y-4">
               {eventsLoading ? (
-                <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-lg"></span>
-                </div>
+                <LoadingSpinner message="Loading events..." />
               ) : (
                 <>
                   {eventFilter === 'nearby' && nearbyEvents.map((event) => (
@@ -116,13 +116,15 @@ const HomePage = () => {
                   ))}
                   {((eventFilter === 'nearby' && nearbyEvents.length === 0) ||
                     (eventFilter === 'my' && myEvents.length === 0)) && (
-                    <div className="text-center py-8">
-                      <p className="text-base-content/60">
-                        {eventFilter === 'my' 
-                          ? "You haven't RSVPd to any events yet" 
-                          : "No events found nearby"}
-                      </p>
-                    </div>
+                    <EmptyState
+                      type="events"
+                      title={eventFilter === 'my' ? "No events yet" : "No nearby events"}
+                      message={eventFilter === 'my'
+                        ? "You haven't RSVPd to any events yet. Browse nearby events to get started!"
+                        : "No events found in your area. Try adjusting your search radius or create a new event!"}
+                      actionLabel={eventFilter === 'my' ? "Browse Events" : "Create Event"}
+                      onAction={() => eventFilter === 'my' ? setEventFilter('nearby') : window.location.href = '/create-event'}
+                    />
                   )}
                 </>
               )}
@@ -177,9 +179,7 @@ const HomePage = () => {
             {/* Posts List */}
             <div className="space-y-4">
               {postsLoading ? (
-                <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-lg"></span>
-                </div>
+                <LoadingSpinner message="Loading posts..." />
               ) : (
                 <>
                   {postFilter === 'following' && followingPosts.map((post) => (
@@ -190,13 +190,15 @@ const HomePage = () => {
                   ))}
                   {((postFilter === 'following' && followingPosts.length === 0) ||
                     (postFilter === 'nearby' && nearbyPosts.length === 0)) && (
-                    <div className="text-center py-8">
-                      <p className="text-base-content/60">
-                        {postFilter === 'following' 
-                          ? "No posts from people you follow yet" 
-                          : "No posts found nearby"}
-                      </p>
-                    </div>
+                    <EmptyState
+                      type="posts"
+                      title={postFilter === 'following' ? "No posts yet" : "No nearby posts"}
+                      message={postFilter === 'following'
+                        ? "You're not following anyone yet or they haven't posted. Follow more people to see their posts!"
+                        : "No posts found in your area. Be the first to post!"}
+                      actionLabel="Create Post"
+                      onAction={() => window.location.href = '/create-post'}
+                    />
                   )}
                 </>
               )}

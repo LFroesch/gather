@@ -174,8 +174,20 @@ router.get("/notifications", protectRoute, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
+    const { type, unread } = req.query;
 
-    const notifications = await Notification.find({ recipient: userId })
+    // Build filter query
+    const filter = { recipient: userId };
+
+    if (type && type !== 'all') {
+      filter.type = type;
+    }
+
+    if (unread === 'true') {
+      filter.isRead = false;
+    }
+
+    const notifications = await Notification.find(filter)
       .populate('sender', 'fullName username profilePic')
       .populate('relatedPost', 'content')
       .populate('relatedEvent', 'title date')
@@ -188,9 +200,17 @@ router.get("/notifications", protectRoute, async (req, res) => {
       isRead: false
     });
 
+    const total = await Notification.countDocuments(filter);
+
     res.status(200).json({
       notifications,
-      unreadCount
+      unreadCount,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
     });
   } catch (error) {
     console.log("Error in getNotifications:", error.message);
@@ -256,6 +276,48 @@ router.delete("/notifications/:notificationId", protectRoute, async (req, res) =
     res.status(200).json({ message: "Notification deleted" });
   } catch (error) {
     console.log("Error in deleteNotification:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Get unread count only
+router.get("/notifications/unread/count", protectRoute, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const unreadCount = await Notification.countDocuments({
+      recipient: userId,
+      isRead: false
+    });
+
+    res.status(200).json({ unreadCount });
+  } catch (error) {
+    console.log("Error in getUnreadCount:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Delete all read notifications (cleanup)
+router.delete("/notifications/cleanup", protectRoute, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Delete read notifications older than 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const result = await Notification.deleteMany({
+      recipient: userId,
+      isRead: true,
+      createdAt: { $lt: thirtyDaysAgo }
+    });
+
+    res.status(200).json({
+      message: "Old notifications cleaned up",
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.log("Error in cleanupNotifications:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
