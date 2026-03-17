@@ -29,6 +29,10 @@ const postSchema = new mongoose.Schema({
             required: true
         }
     },
+    placeName: {
+        type: String,
+        trim: true
+    },
     image: {
         type: String,
         default: ""

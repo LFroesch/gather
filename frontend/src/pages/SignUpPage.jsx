@@ -10,7 +10,7 @@ const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
-    username: "", // Add this line
+    username: "",
     email: "",
     password: "",
   });
@@ -33,13 +33,11 @@ const validateForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const success = validateForm();
-    console.log("Form validation result:", success); // ADD THIS LINE
-    console.log("Form data:", formData); // ADD THIS LINE
     if (success === true) signup(formData);
     };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="min-h-screen relative z-[2] grid lg:grid-cols-2">
       {/* left side */}
       <div className="flex flex-col justify-center items-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-8">
@@ -53,7 +51,7 @@ const validateForm = () => {
                 <MessageSquare className="size-6 text-primary" />
               </div>
               <h1 className="text-2xl font-bold mt-2">Create Account</h1>
-              <p className="text-base-content/60">Get started with your free account</p>
+              <p className="text-base-content/60">Join events happening around you</p>
             </div>
           </div>
           {/* Sign Up Form */}
@@ -178,8 +176,8 @@ const validateForm = () => {
       {/* right side */}
 
       <AuthImagePattern
-        title="Join our community"
-        subtitle="Connect with friends, share moments, and stay in touch with your loved ones."
+        title="What's happening near you?"
+        subtitle="Gather helps you find local events, meet people nearby, and stay in the loop."
       />
     </div>
   );

@@ -1,14 +1,16 @@
-import { 
-  Calendar, 
-  MessageSquare, 
-  Users, 
-  MapPin, 
+import {
+  Calendar,
+  MessageSquare,
+  Users,
+  MapPin,
   Settings,
   Plus,
   Bell,
   Search,
   Shield,
-  Play,
+  BarChart3,
+  UserPlus,
+  Flag,
   User
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -17,74 +19,88 @@ const HelpPage = () => {
   const features = [
     {
       icon: Calendar,
-      title: "Create Events",
-      description: "Host local gatherings, meetups, and activities. Set location, invite friends, and build your community.",
+      title: "Events",
+      description: "Put together a meetup, concert night, or whatever — set the location, invite people, and see who's coming.",
       link: "/create-event",
       color: "red"
     },
     {
       icon: MessageSquare,
-      title: "Share Posts",
-      description: "Connect with your local community through posts. Share updates, photos, and link to your events.",
+      title: "Posts",
+      description: "Share what's going on — a quick thought, a photo, or a shoutout for an upcoming event.",
       link: "/create-post",
       color: "blue"
     },
     {
-      icon: Users,
-      title: "Follow & Connect",
-      description: "Follow interesting people in your area. See their posts and events in your personalized feed.",
+      icon: UserPlus,
+      title: "Friends & Follows",
+      description: "Follow someone to see their stuff in your feed. Send a friend request if you want to DM them.",
       link: "/",
       color: "green"
     },
     {
-      icon: MapPin,
-      title: "Discover Nearby",
-      description: "Find events and posts from people near you. Adjust your discovery radius to explore your area.",
-      link: "/settings",
+      icon: BarChart3,
+      title: "Polls",
+      description: "Ask your area a question — best pizza spot, what to do this weekend, whatever. Polls need a quick admin approval first.",
+      link: "/polls",
       color: "purple"
     },
     {
-      icon: Bell,
-      title: "Stay Updated",
-      description: "Get notified about new followers, event invites, post likes, and nearby community activity.",
-      link: "/notifications",
+      icon: Search,
+      title: "Search",
+      description: "Look up events, posts, or people. You can filter by nearby or just the accounts you follow.",
+      link: "/search",
       color: "yellow"
     },
     {
       icon: MessageSquare,
-      title: "Direct Messages",
-      description: "Chat privately with other community members. Coordinate events and build meaningful connections.",
+      title: "Messages",
+      description: "Chat with friends in real time. You'll need to be friends first (you can change this in settings).",
       link: "/messages",
       color: "pink"
+    },
+    {
+      icon: Bell,
+      title: "Notifications",
+      description: "Friend requests, RSVPs, likes, invites — it all shows up here so you don't miss anything.",
+      link: "/notifications",
+      color: "blue"
+    },
+    {
+      icon: Flag,
+      title: "Reporting",
+      description: "See something off? Hit the flag icon on any post, event, or profile and we'll take a look.",
+      link: "/help",
+      color: "red"
     }
   ];
 
   const quickTips = [
     {
-      title: "Set Your Location",
-      description: "Update your location in settings to discover relevant local content and events."
+      title: "Set your location",
+      description: "Head to Settings and pick your city so you actually see stuff near you."
     },
     {
-      title: "Use Clear Titles",
-      description: "Make your events and posts discoverable with descriptive, engaging titles."
+      title: "Add some friends",
+      description: "Send friend requests to unlock messaging. Follow people to get their posts and events in your feed."
     },
     {
-      title: "Engage Actively",
-      description: "Like posts, RSVP to events, and follow interesting people to build your network."
+      title: "Get involved",
+      description: "RSVP to events, vote on polls, like posts — the more you do, the more you'll see."
     },
     {
-      title: "Stay Safe",
-      description: "Always meet in public places and trust your instincts when attending events."
+      title: "Stay safe",
+      description: "Meet in public, let someone know your plans, and report anything that feels off."
     }
   ];
 
   const safetyGuidelines = [
-    "Meet in public places for first-time meetups",
-    "Share your plans with someone you trust",
-    "Trust your instincts - leave if something feels wrong",
-    "Don't share personal information too quickly",
-    "Report inappropriate behavior immediately",
-    "Verify event details before attending"
+    "Meet in public for first-time hangouts",
+    "Tell someone where you're going",
+    "Trust your gut — if something feels off, leave",
+    "Don't give out personal info too fast",
+    "Report anything sketchy right away",
+    "Double-check event details before you show up"
   ];
 
   const getColorClasses = (color) => {
@@ -124,17 +140,16 @@ const HelpPage = () => {
   };
 
   return (
-    <div className="bg-base-300 text-base-content min-h-screen pt-20">
+    <div className="bg-base-300 text-base-content min-h-screen relative z-[2] pt-20">
       <div className="mx-auto container px-4 py-8">
         
         {/* Hero Section */}
         <div className="text-center py-16 max-w-4xl mx-auto">
           <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Welcome to EventChat
+            Welcome to Gather
           </h1>
           <p className="text-xl text-base-content/70 mb-8 leading-relaxed">
-            Connect with your local community through events and social posts. 
-            Your neighborhood network starts here.
+            Find events, share posts, and meet people in your area. Here's how everything works.
           </p>
         </div>
 
@@ -164,7 +179,7 @@ const HelpPage = () => {
 
         {/* Quick Start Section */}
         <div className="text-center py-12 max-w-4xl mx-auto">
-          <h2 className="text-4xl font-bold mb-8">Ready to Get Started?</h2>
+          <h2 className="text-4xl font-bold mb-8">Jump in</h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link 
               to="/create-event" 
@@ -194,37 +209,57 @@ const HelpPage = () => {
                 How do I change my location?
               </div>
               <div className="collapse-content">
-                <p className="text-base-content/80">Go to Settings → Location Settings and search for your city. You can also adjust your search radius to see content from a wider or smaller area.</p>
+                <p className="text-base-content/80">Go to Settings, find Location Settings, and search for your city. You can also change your radius there if you want to see stuff from farther away (or closer).</p>
               </div>
             </div>
 
             <div className="collapse collapse-arrow bg-base-100/50">
               <input type="radio" name="faq-accordion" />
               <div className="collapse-title text-lg font-medium">
-                Can I make private events?
+                What's the difference between friends and followers?
               </div>
               <div className="collapse-content">
-                <p className="text-base-content/80">Yes! When creating an event, check the 'Make this event private' option. Private events are invite-only and won't appear in public searches.</p>
+                <p className="text-base-content/80">Following is one-way — you'll see their stuff in your feed. Friendship goes both ways and unlocks DMs. You can send a friend request from anyone's profile page.</p>
               </div>
             </div>
 
             <div className="collapse collapse-arrow bg-base-100/50">
               <input type="radio" name="faq-accordion" />
               <div className="collapse-title text-lg font-medium">
-                How do I invite people to my event?
+                How do I message someone?
               </div>
               <div className="collapse-content">
-                <p className="text-base-content/80">On the event page, click the 'Invite' button. You can select from your contacts or people who are already attending the event.</p>
+                <p className="text-base-content/80">By default you need to be friends first — send a request from their profile and once they accept, you're good to go. If you want to let anyone message you, you can turn that on in Settings under Privacy.</p>
               </div>
             </div>
 
             <div className="collapse collapse-arrow bg-base-100/50">
               <input type="radio" name="faq-accordion" />
               <div className="collapse-title text-lg font-medium">
-                What's the difference between 'Events Near Me' and 'My Events'?
+                What's the difference between 'Near Me' and 'My Events'?
               </div>
               <div className="collapse-content">
-                <p className="text-base-content/80">'Events Near Me' shows all public events in your area. 'My Events' shows only events you've RSVPed 'yes' to.</p>
+                <p className="text-base-content/80">"Near Me" is everything within your radius. "My Events" is stuff you've RSVPed to. "Following" shows events from people you follow, regardless of distance.</p>
+              </div>
+            </div>
+
+            <div className="collapse collapse-arrow bg-base-100/50">
+              <input type="radio" name="faq-accordion" />
+              <div className="collapse-title text-lg font-medium">
+                How do polls work?
+              </div>
+              <div className="collapse-content">
+                <p className="text-base-content/80">Anyone can create a poll — pick a question, add up to 4 options, and set how long it lasts. Polls are tied to a location and need a quick approval from a mod before they go live.</p>
+              </div>
+            </div>
+
+            <div className="collapse collapse-arrow bg-base-100/50">
+              <input type="radio" name="faq-accordion" />
+              <div className="collapse-title text-lg font-medium">
+                How do I report something?
+              </div>
+              <div className="collapse-content">
+                <p className="text-base-content/80">Hit the flag icon on any event, post, poll, or profile. Tell us what's wrong and a mod will review it.</p>
               </div>
             </div>
           </div>

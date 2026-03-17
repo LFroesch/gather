@@ -4,6 +4,7 @@ import { MapPin, Image, X, Calendar } from 'lucide-react';
 import { usePostStore } from '../store/usePostStore';
 import { useEventStore } from '../store/useEventStore';
 import { useLocationStore } from '../store/useLocationStore';
+import LocationPicker from '../components/LocationPicker';
 import toast from 'react-hot-toast';
 
 const CreatePostPage = () => {
@@ -16,7 +17,9 @@ const CreatePostPage = () => {
     content: '',
     image: null,
     type: 'general',
-    eventId: ''
+    eventId: '',
+    location: null,
+    placeName: ''
   });
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -66,11 +69,13 @@ const CreatePostPage = () => {
         content: formData.content.trim(),
         image: formData.image,
         type: formData.eventId ? 'event-related' : 'general',
-        eventId: formData.eventId || undefined
+        eventId: formData.eventId || undefined,
+        location: formData.location || undefined,
+        placeName: formData.placeName?.trim() || undefined
       };
 
       await createPost(postData);
-      navigate('/');
+      navigate('/posts');
     } catch (error) {
       console.error('Failed to create post:', error);
     }
@@ -78,9 +83,9 @@ const CreatePostPage = () => {
 
   if (!isLocationSet()) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="min-h-screen pt-20">
         <div className="container mx-auto px-4 max-w-2xl">
-          <div className="bg-base-100 rounded-xl shadow-lg p-6 text-center">
+          <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 text-center">
             <MapPin className="w-12 h-12 mx-auto text-warning mb-4" />
             <h2 className="text-xl font-bold mb-2">Location Required</h2>
             <p className="text-base-content/60 mb-4">
@@ -99,9 +104,9 @@ const CreatePostPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20">
-      <div className="container mx-auto px-4 max-w-2xl">
-        <div className="bg-base-100 rounded-xl shadow-lg p-6">
+    <div className="min-h-screen pt-20">
+      <div className="container mx-auto px-4 max-w-2xl animate-fade-up">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
           <h1 className="text-2xl font-bold mb-6">Create New Post</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -184,12 +189,27 @@ const CreatePostPage = () => {
               </div>
             )}
 
-            {/* Location Display */}
-            <div className="alert alert-info">
-              <MapPin className="w-4 h-4" />
-              <span>
-                This post will be shared from: {currentLocation?.city}, {currentLocation?.state}
-              </span>
+            {/* Location */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Location</span>
+              </label>
+              <LocationPicker
+                onLocationSelect={(loc) => {
+                  if (loc) {
+                    setFormData(prev => ({
+                      ...prev,
+                      location: { city: loc.city, state: loc.state, country: loc.country, coordinates: loc.coordinates },
+                      placeName: loc.placeName || ''
+                    }));
+                  } else {
+                    setFormData(prev => ({ ...prev, location: null, placeName: '' }));
+                  }
+                }}
+                initialLocation={currentLocation}
+                showPlaceName={true}
+                placeholderPlace="Tag a place (optional)"
+              />
             </div>
 
             {/* Submit Buttons */}
@@ -197,7 +217,7 @@ const CreatePostPage = () => {
               <button
                 type="button"
                 className="btn btn-outline flex-1"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/posts')}
               >
                 Cancel
               </button>

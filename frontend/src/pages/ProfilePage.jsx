@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User, Edit } from "lucide-react";
+import { useFriendStore } from "../store/useFriendStore";
+import { Camera, Mail, User, Edit, FileText, Calendar, Users } from "lucide-react";
 import EditProfileModal from "../components/EditProfileModal";
 import { useEventStore } from '../store/useEventStore';
 import { usePostStore } from '../store/usePostStore';
@@ -9,16 +11,23 @@ import PostCard from '../components/PostCard';
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
+  const { friends, getFriends } = useFriendStore();
   const { myEvents, getMyEvents, isLoading: eventsLoading } = useEventStore();
   const { getMyPosts, myPosts, isLoading: postsLoading } = usePostStore();
+  const [friendsLoading, setFriendsLoading] = useState(false);
   const [selectedImg, setSelectedImg] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState('posts');
 
+  // Load default tab data on mount
+  useEffect(() => {
+    if (authUser) getMyPosts();
+  }, [authUser, getMyPosts]);
+
   // Add a loading state for when authUser is not fully loaded
   if (!authUser) {
     return (
-      <div className="pt-20">
+      <div className="min-h-screen pt-20">
         <div className="max-w-2xl mx-auto p-4 py-8">
           <div className="bg-base-300 rounded-xl p-6 space-y-8">
             <div className="text-center">
@@ -38,9 +47,12 @@ const ProfilePage = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'posts') {
-      getMyPosts(); // Changed from getUserPosts(authUser._id)
+      getMyPosts();
     } else if (tab === 'events') {
       getMyEvents();
+    } else if (tab === 'friends') {
+      setFriendsLoading(true);
+      getFriends(authUser._id).finally(() => setFriendsLoading(false));
     }
   };
 
@@ -60,8 +72,8 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="pt-20">
-      <div className="max-w-2xl mx-auto p-4 py-8">
+    <div className="min-h-screen pt-20 pb-20">
+      <div className="max-w-2xl mx-auto p-4 py-8 animate-fade-up">
         <div className="bg-base-300 rounded-xl p-6 space-y-8">
           <div className="text-center">
             <h1 className="text-2xl font-semibold">Profile</h1>
@@ -104,13 +116,13 @@ const ProfilePage = () => {
                 />
               </label>
             </div>
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-base-content/60">
               {isUpdatingProfile ? "Uploading..." : "Click the camera icon to update your photo"}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <div className="text-sm text-zinc-400 flex items-center gap-2">
+            <div className="text-sm text-base-content/60 flex items-center gap-2">
               <User className="w-4 h-4" />
               Full Name
             </div>
@@ -118,7 +130,7 @@ const ProfilePage = () => {
           </div>
 
           <div className="space-y-1.5">
-            <div className="text-sm text-zinc-400 flex items-center gap-2">
+            <div className="text-sm text-base-content/60 flex items-center gap-2">
               <User className="w-4 h-4" />
               Username
             </div>
@@ -126,7 +138,7 @@ const ProfilePage = () => {
           </div>
 
           <div className="space-y-1.5">
-            <div className="text-sm text-zinc-400 flex items-center gap-2">
+            <div className="text-sm text-base-content/60 flex items-center gap-2">
               <Mail className="w-4 h-4" />
               Email Address
             </div>
@@ -135,15 +147,22 @@ const ProfilePage = () => {
 
           {authUser?.bio && (
             <div className="space-y-1.5">
-              <div className="text-sm text-zinc-400">Bio</div>
+              <div className="text-sm text-base-content/60">Bio</div>
               <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser.bio}</p>
             </div>
           )}
 
+          {/* Stats */}
+          <div className="flex items-center gap-6 text-sm text-base-content/60">
+            <span>{(authUser.followers || []).length} followers</span>
+            <span>{(authUser.following || []).length} following</span>
+            <span>{(authUser.friends || []).length} friends</span>
+          </div>
+
           <div className="mt-6 bg-base-300 rounded-xl p-6">
             <h2 className="text-lg font-medium  mb-4">Account Information</h2>
             <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between py-2 border-b border-zinc-700">
+              <div className="flex items-center justify-between py-2 border-b border-base-300">
                 <span>Member Since</span>
                 <span className="bg-base-200 px-3 py-1 rounded">
                   {authUser?.createdAt ? authUser.createdAt.split("T")[0] : "Loading..."}
@@ -158,7 +177,7 @@ const ProfilePage = () => {
         </div>
 
         {/* Tabs */}
-        <div className="tabs tabs-boxed bg-base-100 shadow-lg mb-6 mt-6">
+        <div className="tabs tabs-boxed bg-base-100 shadow-lg border-2 border-base-300 font-bold mb-6 mt-6">
           <button
             className={`tab tab-lg ${activeTab === 'posts' ? 'tab-active' : ''}`}
             onClick={() => handleTabChange('posts')}
@@ -170,6 +189,12 @@ const ProfilePage = () => {
             onClick={() => handleTabChange('events')}
           >
             Events
+          </button>
+          <button
+            className={`tab tab-lg ${activeTab === 'friends' ? 'tab-active' : ''}`}
+            onClick={() => handleTabChange('friends')}
+          >
+            Friends
           </button>
         </div>
 
@@ -187,10 +212,10 @@ const ProfilePage = () => {
                     <PostCard key={post._id} post={post} />
                   ))}
                   {myPosts.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-base-content/60">
-                        You haven't posted anything yet
-                      </p>
+                    <div className="text-center py-16">
+                      <FileText className="w-12 h-12 text-base-content/30 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold mb-1">No posts yet</h3>
+                      <p className="text-base-content/60">Share what's on your mind — your posts will appear here</p>
                     </div>
                   )}
                 </>
@@ -206,14 +231,59 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <>
-                  {myEvents.map((event) => (
+                  {[...myEvents].sort((a, b) => {
+                    const now = new Date();
+                    const aUpcoming = new Date(a.date) >= now;
+                    const bUpcoming = new Date(b.date) >= now;
+                    if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+                    return aUpcoming
+                      ? new Date(a.date) - new Date(b.date)
+                      : new Date(b.date) - new Date(a.date);
+                  }).map((event) => (
                     <EventCard key={event._id} event={event} showRSVPStatus />
                   ))}
                   {myEvents.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-base-content/60">
-                        You haven't RSVP'd to any events yet
-                      </p>
+                    <div className="text-center py-16">
+                      <Calendar className="w-12 h-12 text-base-content/30 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold mb-1">No events yet</h3>
+                      <p className="text-base-content/60">RSVP to events and they'll show up here</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {activeTab === 'friends' && (
+            <>
+              {friendsLoading ? (
+                <div className="flex justify-center py-8">
+                  <span className="loading loading-spinner loading-lg"></span>
+                </div>
+              ) : (
+                <>
+                  {friends.map((friend) => (
+                    <Link
+                      key={friend._id}
+                      to={`/profile/${friend.username}`}
+                      className="flex items-center gap-3 p-4 bg-base-100 rounded-lg hover:bg-base-200 transition-colors"
+                    >
+                      <div className="avatar">
+                        <div className="w-12 h-12 rounded-full">
+                          <img src={friend.profilePic || '/avatar.png'} alt={friend.fullName} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-medium">{friend.fullName}</p>
+                        <p className="text-sm text-base-content/60">@{friend.username}</p>
+                      </div>
+                    </Link>
+                  ))}
+                  {friends.length === 0 && (
+                    <div className="text-center py-16">
+                      <Users className="w-12 h-12 text-base-content/30 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold mb-1">No friends yet</h3>
+                      <p className="text-base-content/60">Visit other profiles to send friend requests</p>
                     </div>
                   )}
                 </>

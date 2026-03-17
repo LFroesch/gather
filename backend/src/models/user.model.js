@@ -87,7 +87,41 @@ const userSchema = new mongoose.Schema({
     following: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }]
+    }],
+    friends: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    messagingPreference: {
+        type: String,
+        enum: ['friends_only', 'everyone'],
+        default: 'friends_only'
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin', 'moderator'],
+        default: 'user'
+    },
+    isBanned: {
+        type: Boolean,
+        default: false
+    },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
+    votingStats: {
+        totalVotes: {
+            type: Number,
+            default: 0
+        },
+        votingStreak: {
+            type: Number,
+            default: 0
+        },
+        lastVoteDate: {
+            type: Date,
+            default: null
+        }
+    }
 }, {
     timestamps: true
 });

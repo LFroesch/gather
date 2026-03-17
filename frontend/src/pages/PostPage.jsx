@@ -12,6 +12,7 @@ import {
 import { usePostStore } from '../store/usePostStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { axiosInstance } from '../lib/axios';
+import CommentSection from '../components/CommentSection';
 import { formatDistance } from '../lib/utils';
 import toast from 'react-hot-toast';
 
@@ -113,9 +114,9 @@ const PostPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="min-h-screen pt-20">
         <div className="container mx-auto px-4 max-w-2xl">
-          <div className="bg-base-100 rounded-xl shadow-lg p-6">
+          <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
             <div className="animate-pulse space-y-4">
               <div className="h-4 bg-base-300 rounded w-1/4"></div>
               <div className="h-8 bg-base-300 rounded w-3/4"></div>
@@ -127,13 +128,13 @@ const PostPage = () => {
     );
   }
 
-  if (!post) {
+  if (!post || !post.author) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="min-h-screen pt-20">
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-4">Post not found</h2>
-            <Link to="/" className="btn btn-primary">
+            <Link to="/posts" className="btn btn-primary">
               Go Home
             </Link>
           </div>
@@ -146,8 +147,8 @@ const PostPage = () => {
   const isAuthor = post.author._id === authUser._id;
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20 pb-20">
-      <div className="container mx-auto px-4 max-w-2xl">
+    <div className="min-h-screen pt-20 pb-20">
+      <div className="container mx-auto px-4 max-w-2xl animate-fade-up">
         {/* Back Button */}
         <button 
           onClick={() => window.history.back()}
@@ -158,7 +159,7 @@ const PostPage = () => {
         </button>
 
         {/* Post Content */}
-        <div className="bg-base-100 rounded-xl shadow-lg p-6">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
           {/* Author Info */}
           <div className="flex items-center gap-3 mb-6">
             <Link to={`/profile/${post.author.username}`}>
@@ -259,9 +260,12 @@ const PostPage = () => {
               <span className="font-medium">{post.likes?.length || 0}</span>
             </button>
             
-            <button className="flex items-center gap-2 btn btn-ghost text-base-content/60 hover:text-primary">
+            <button
+              className="flex items-center gap-2 btn btn-ghost text-base-content/60 hover:text-primary"
+              onClick={() => document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' })}
+            >
               <MessageCircle className="w-5 h-5" />
-              <span className="font-medium">Comment</span>
+              <span className="font-medium">{post.commentCount || 0}</span>
             </button>
 
             <button 
@@ -274,14 +278,12 @@ const PostPage = () => {
           </div>
         </div>
 
-        {/* Comments Section (Placeholder for future implementation) */}
-        <div className="bg-base-100 rounded-xl shadow-lg p-6 mt-6">
-          <h3 className="text-lg font-bold mb-4">Comments</h3>
-          <div className="text-center py-8 text-base-content/60">
-            <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-40" />
-            <p>Comments feature coming soon!</p>
-          </div>
-        </div>
+        {/* Comments Section */}
+        <CommentSection
+          parentType="post"
+          parentId={postId}
+          parentOwnerId={post.author._id}
+        />
       </div>
     </div>
   );

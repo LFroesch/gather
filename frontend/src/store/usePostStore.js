@@ -11,6 +11,7 @@ export const usePostStore = create((set, get) => ({
   isLoading: false,
   isCreating: false,
   lastFetchParams: null,
+  hasMore: false,
 
   // Create a new post
   createPost: async (postData) => {
@@ -38,10 +39,10 @@ export const usePostStore = create((set, get) => ({
   getFollowingPosts: async (page = 1) => {
     set({ isLoading: true });
     try {
-      const res = await axiosInstance.get(`/posts/following?page=${page}&limit=10`);
-      
-      set({ lastFetchParams: { type: 'following', page } });
-      
+      const res = await axiosInstance.get(`/posts/following?page=${page}&limit=50`);
+
+      set({ lastFetchParams: { type: 'following', page }, hasMore: res.data.length === 50 });
+
       if (page === 1) {
         set({ followingPosts: res.data });
       } else {
@@ -65,10 +66,10 @@ export const usePostStore = create((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await axiosInstance.get(`/posts/nearby?page=${page}&limit=10`);
-      
-      set({ lastFetchParams: { type: 'nearby', page } });
-      
+      const res = await axiosInstance.get(`/posts/nearby?page=${page}&limit=50`);
+
+      set({ lastFetchParams: { type: 'nearby', page }, hasMore: res.data.length === 50 });
+
       if (page === 1 || forceRefresh) {
         set({ nearbyPosts: res.data });
       } else {

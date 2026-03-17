@@ -1,5 +1,5 @@
 {
-  "name": "realtime-chat-app",
+  "name": "gather",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,15 +10,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LFroesch/event-chat.git"
+    "url": "git+https://github.com/LFroesch/gather.git"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "AGPL-3.0-only",
   "bugs": {
-    "url": "https://github.com/LFroesch/event-chat/issues"
+    "url": "https://github.com/LFroesch/gather/issues"
   },
-  "homepage": "https://github.com/LFroesch/event-chat#readme",
+  "homepage": "https://github.com/LFroesch/gather#readme",
   "devDependencies": {
     "concurrently": "^9.1.2"
   }

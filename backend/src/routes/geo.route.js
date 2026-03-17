@@ -34,7 +34,7 @@ router.put("/current-location", protectRoute, async (req, res) => {
       currentCity: updatedUser.currentCity
     });
   } catch (error) {
-    console.log("Error in updateCurrentLocation:", error.message);
+    console.error("Error in updateCurrentLocation:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -85,7 +85,7 @@ router.put("/settings", protectRoute, async (req, res) => {
       locationSettings: updatedUser.locationSettings
     });
   } catch (error) {
-    console.log("Error in updateLocationSettings:", error.message);
+    console.error("Error in updateLocationSettings:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -102,7 +102,7 @@ router.get("/settings", protectRoute, async (req, res) => {
       currentCity: user.currentCity
     });
   } catch (error) {
-    console.log("Error in getLocationSettings:", error.message);
+    console.error("Error in getLocationSettings:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -124,7 +124,7 @@ router.get("/search-cities", protectRoute, async (req, res) => {
     
     const response = await fetch(nominatimUrl, {
       headers: {
-        'User-Agent': 'EventChatApp/1.0' // Nominatim requires a User-Agent
+        'User-Agent': 'GatherApp/1.0' // Nominatim requires a User-Agent
       }
     });
     
@@ -191,7 +191,7 @@ router.get("/search-cities", protectRoute, async (req, res) => {
 
     res.status(200).json(cities);
   } catch (error) {
-    console.log("Error in searchCities:", error.message);
+    console.error("Error in searchCities:", error.message);
     
     // Fallback to mock data if geocoding fails (USA cities only)
     const { query } = req.query; // FIX: Access query from req.query here
@@ -252,7 +252,7 @@ router.post("/calculate-distance", protectRoute, async (req, res) => {
       distanceKm: Math.round(distanceKm * 10) / 10
     });
   } catch (error) {
-    console.log("Error in calculateDistance:", error.message);
+    console.error("Error in calculateDistance:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });

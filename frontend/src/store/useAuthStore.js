@@ -11,6 +11,9 @@ export const useAuthStore = create((set, get) => ({
   isLoggingIn: false,
   isUpdatingProfile: false,
   isCheckingAuth: true,
+  isSendingReset: false,
+  isResettingPassword: false,
+  isChangingPassword: false,
   onlineUsers: [],
   socket: null,
 
@@ -36,7 +39,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Signup failed");
     } finally {
       set({ isSigningUp: false });
     }
@@ -51,7 +54,7 @@ export const useAuthStore = create((set, get) => ({
 
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
     }
@@ -64,7 +67,7 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Logout failed");
     }
   },
 
@@ -76,9 +79,51 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Profile updated successfully");
     } catch (error) {
       console.log("error in update profile:", error);
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Profile update failed");
     } finally {
       set({ isUpdatingProfile: false });
+    }
+  },
+
+  forgotPassword: async (email) => {
+    set({ isSendingReset: true });
+    try {
+      const res = await axiosInstance.post("/auth/forgot-password", { email });
+      toast.success(res.data.message, { id: "forgot-password" });
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong", { id: "forgot-password" });
+      return false;
+    } finally {
+      set({ isSendingReset: false });
+    }
+  },
+
+  resetPassword: async (token, password) => {
+    set({ isResettingPassword: true });
+    try {
+      const res = await axiosInstance.post(`/auth/reset-password/${token}`, { password });
+      toast.success(res.data.message, { id: "reset-password" });
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Reset failed", { id: "reset-password" });
+      return false;
+    } finally {
+      set({ isResettingPassword: false });
+    }
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    set({ isChangingPassword: true });
+    try {
+      const res = await axiosInstance.put("/auth/change-password", { currentPassword, newPassword });
+      toast.success(res.data.message, { id: "change-password" });
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Password change failed", { id: "change-password" });
+      return false;
+    } finally {
+      set({ isChangingPassword: false });
     }
   },
 
@@ -87,9 +132,7 @@ export const useAuthStore = create((set, get) => ({
     if (!authUser || get().socket?.connected) return;
 
     const socket = io(BASE_URL, {
-      query: {
-        userId: authUser._id,
-      },
+      withCredentials: true,
     });
     socket.connect();
 

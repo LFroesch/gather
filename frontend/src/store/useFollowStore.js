@@ -184,7 +184,18 @@ export const useNotificationStore = create((set, get) => ({
     }));
   },
 
-  // Clear notifications
+  // Clear all notifications (API call)
+  clearAllNotifications: async () => {
+    try {
+      await axiosInstance.delete("/follow/notifications/clear-all");
+      set({ notifications: [], unreadCount: 0 });
+      toast.success("All notifications cleared");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to clear notifications");
+    }
+  },
+
+  // Clear notifications (local state only)
   clearNotifications: () => {
     set({
       notifications: [],

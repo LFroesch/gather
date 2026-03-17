@@ -6,10 +6,12 @@ export const useEventStore = create((set, get) => ({
   events: [],
   myEvents: [],
   nearbyEvents: [],
+  followingEvents: [],
   selectedEvent: null,
   isLoading: false,
   isCreating: false,
   lastFetchParams: null,
+  hasMore: false,
 
   // Create a new event
   createEvent: async (eventData) => {
@@ -70,11 +72,10 @@ export const useEventStore = create((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const res = await axiosInstance.get(`/events/nearby?page=${page}&limit=10`);
-      
-      // Store fetch parameters for potential refetching
-      set({ lastFetchParams: { type: 'nearby', page } });
-      
+      const res = await axiosInstance.get(`/events/nearby?page=${page}&limit=50`);
+
+      set({ lastFetchParams: { type: 'nearby', page }, hasMore: res.data.length === 50 });
+
       if (page === 1 || forceRefresh) {
         set({ nearbyEvents: res.data });
       } else {
@@ -89,15 +90,34 @@ export const useEventStore = create((set, get) => ({
     }
   },
 
+  // Get events from followed users
+  getFollowingEvents: async (page = 1) => {
+    set({ isLoading: true });
+    try {
+      const res = await axiosInstance.get(`/events/following?page=${page}&limit=50`);
+      set({ lastFetchParams: { type: 'following', page }, hasMore: res.data.length === 50 });
+      if (page === 1) {
+        set({ followingEvents: res.data });
+      } else {
+        set((state) => ({
+          followingEvents: [...state.followingEvents, ...res.data]
+        }));
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to load following events");
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   // Get user's events (RSVPd yes)
   getMyEvents: async (page = 1) => {
     set({ isLoading: true });
     try {
-      const res = await axiosInstance.get(`/events/my-events?page=${page}&limit=10`);
-      
-      // Store fetch parameters for potential refetching
-      set({ lastFetchParams: { type: 'my', page } });
-      
+      const res = await axiosInstance.get(`/events/my-events?page=${page}&limit=50`);
+
+      set({ lastFetchParams: { type: 'my', page }, hasMore: res.data.length === 50 });
+
       if (page === 1) {
         set({ myEvents: res.data });
       } else {
@@ -121,6 +141,8 @@ export const useEventStore = create((set, get) => ({
       await get().getNearbyEvents(1, true);
     } else if (lastFetchParams.type === 'my') {
       await get().getMyEvents(1);
+    } else if (lastFetchParams.type === 'following') {
+      await get().getFollowingEvents(1);
     }
   },
 
@@ -164,7 +186,8 @@ export const useEventStore = create((set, get) => ({
       set((state) => ({
         events: state.events.map(updateEvent),
         nearbyEvents: state.nearbyEvents.map(updateEvent),
-        myEvents: status === 'yes' 
+        followingEvents: state.followingEvents.map(updateEvent),
+        myEvents: status === 'yes'
           ? state.myEvents.map(updateEvent)
           : state.myEvents.filter(event => event._id !== eventId),
         selectedEvent: state.selectedEvent?._id === eventId 
@@ -208,6 +231,7 @@ export const useEventStore = create((set, get) => ({
       set((state) => ({
         events: state.events.filter(event => event._id !== eventId),
         nearbyEvents: state.nearbyEvents.filter(event => event._id !== eventId),
+        followingEvents: state.followingEvents.filter(event => event._id !== eventId),
         myEvents: state.myEvents.filter(event => event._id !== eventId),
         selectedEvent: state.selectedEvent?._id === eventId ? null : state.selectedEvent
       }));
@@ -225,6 +249,7 @@ export const useEventStore = create((set, get) => ({
       events: [],
       myEvents: [],
       nearbyEvents: [],
+      followingEvents: [],
       selectedEvent: null,
       lastFetchParams: null
     });

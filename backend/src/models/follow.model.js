@@ -34,12 +34,18 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: [
-            'follow', 
-            'like_post', 
-            'event_invite', 
-            'event_rsvp', 
+            'follow',
+            'like_post',
+            'comment',
+            'like_comment',
+            'reply',
+            'event_invite',
+            'event_rsvp',
             'new_event_nearby',
-            'message'
+            'message',
+            'friend_request',
+            'friend_accept',
+            'poll_pending'
         ],
         required: true
     },
@@ -55,6 +61,11 @@ const notificationSchema = new mongoose.Schema({
     relatedEvent: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Event',
+        default: null
+    },
+    relatedPoll: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Poll',
         default: null
     },
     isRead: {

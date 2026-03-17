@@ -6,9 +6,11 @@ import { useAuthStore } from "./useAuthStore";
 export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
-  selectedUser: null,
+  selectedUser: JSON.parse(localStorage.getItem("chat-selected-user")) || null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  totalUnreadMessages: 0,
+  perUserUnread: {}, // { senderId: count }
 
   getUsers: async () => {
     set({ isUsersLoading: true });
@@ -33,6 +35,7 @@ export const useChatStore = create((set, get) => ({
       set({ isMessagesLoading: false });
     }
   },
+
   sendMessage: async (messageData) => {
     const { selectedUser, messages } = get();
     try {
@@ -40,6 +43,35 @@ export const useChatStore = create((set, get) => ({
       set({ messages: [...messages, res.data] });
     } catch (error) {
       toast.error(error.response.data.message);
+    }
+  },
+
+  markAsRead: async (userId) => {
+    try {
+      await axiosInstance.put(`/messages/read/${userId}`);
+      // Update local messages to show as read
+      set({
+        messages: get().messages.map((m) =>
+          m.senderId === userId ? { ...m, read: true } : m
+        ),
+      });
+      // Refresh unread counts
+      get().getUnreadCounts();
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  },
+
+  getUnreadCounts: async () => {
+    try {
+      const res = await axiosInstance.get("/messages/unread-counts");
+      const perUser = {};
+      for (const entry of res.data.perUser) {
+        perUser[entry._id] = entry.count;
+      }
+      set({ totalUnreadMessages: res.data.total, perUserUnread: perUser });
+    } catch (error) {
+      console.error("Error getting unread counts:", error);
     }
   },
 
@@ -56,13 +88,44 @@ export const useChatStore = create((set, get) => ({
       set({
         messages: [...get().messages, newMessage],
       });
+
+      // Auto-mark as read since we're viewing this conversation
+      get().markAsRead(selectedUser._id);
+    });
+
+    // Listen for read receipts from the other user
+    socket.on("messagesRead", ({ readBy }) => {
+      if (readBy === selectedUser._id) {
+        set({
+          messages: get().messages.map((m) =>
+            m.senderId !== readBy ? { ...m, read: true } : m
+          ),
+        });
+      }
     });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     socket.off("newMessage");
+    socket.off("messagesRead");
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  searchAllUsers: async (query) => {
+    try {
+      const res = await axiosInstance.get(`/auth/search?q=${encodeURIComponent(query)}`);
+      return res.data;
+    } catch (error) {
+      return [];
+    }
+  },
+
+  setSelectedUser: (selectedUser) => {
+    if (selectedUser) {
+      localStorage.setItem("chat-selected-user", JSON.stringify(selectedUser));
+    } else {
+      localStorage.removeItem("chat-selected-user");
+    }
+    set({ selectedUser });
+  },
 }));

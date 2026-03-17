@@ -1,11 +1,14 @@
 import { THEMES } from "../constants";
 import { useThemeStore } from "../store/useThemeStore";
 import { useLocationStore } from "../store/useLocationStore";
-import { MapPin, Search, Save, Loader, Edit, X, Palette, Settings as SettingsIcon } from "lucide-react";
+import { useAuthStore } from "../store/useAuthStore";
+import { MapPin, Search, Save, Loader, Edit, X, Palette, Settings as SettingsIcon, Shield, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 const SettingsPage = () => {
   const { theme, setTheme } = useThemeStore();
+  const { authUser, updateProfile, changePassword, isChangingPassword } = useAuthStore();
   const {
     currentLocation,
     locationSettings,
@@ -22,7 +25,11 @@ const SettingsPage = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [localRadius, setLocalRadius] = useState(25);
   const [isSearching, setIsSearching] = useState(false);
-  const [activeSection, setActiveSection] = useState('location');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const { state: routeState } = useLocation();
+  const [activeSection, setActiveSection] = useState(routeState?.section || 'location');
   
   // Refs for cleanup
   const abortControllerRef = useRef(null);
@@ -118,27 +125,36 @@ const SettingsPage = () => {
     return cleanup;
   }, [cleanup]);
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) return;
+    const success = await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+    if (success) setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  };
+
   const tabs = [
     { id: 'location', label: 'Location', icon: MapPin },
+    { id: 'account', label: 'Account', icon: Lock },
+    { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'theme', label: 'Theme', icon: Palette }
   ];
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen pt-20">
+      <div className="container mx-auto px-4 max-w-4xl animate-fade-up">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 mb-6 text-center">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
               <SettingsIcon className="w-8 h-8 text-primary" />
             </div>
           </div>
           <h1 className="text-3xl font-bold mb-2">Settings</h1>
-          <p className="text-base-content/60">Customize your EventChat experience</p>
+          <p className="text-base-content/60">Customize your Gather experience</p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="tabs tabs-boxed bg-base-100 shadow-lg mb-6">
+        <div className="tabs tabs-boxed bg-base-100 shadow-lg border-2 border-base-300 font-bold mb-6">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -155,7 +171,7 @@ const SettingsPage = () => {
         </div>
 
         {/* Main Content */}
-        <div className="bg-base-100 rounded-xl shadow-lg p-6">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
           {/* Theme Section */}
           {activeSection === 'theme' && (
             <div className="space-y-6">
@@ -215,6 +231,158 @@ const SettingsPage = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Privacy Section */}
+          {activeSection === 'privacy' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Privacy Settings</h2>
+                <p className="text-base-content/60">Control who can interact with you</p>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Messaging</h3>
+                <p className="text-sm text-base-content/60">Choose who can send you direct messages</p>
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 p-4 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors">
+                    <input
+                      type="radio"
+                      name="messagingPref"
+                      className="radio radio-primary"
+                      checked={authUser?.messagingPreference === 'friends_only'}
+                      onChange={() => updateProfile({ messagingPreference: 'friends_only' })}
+                    />
+                    <div>
+                      <p className="font-medium">Friends only</p>
+                      <p className="text-sm text-base-content/60">Only friends can message you</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 p-4 bg-base-200 rounded-lg cursor-pointer hover:bg-base-300 transition-colors">
+                    <input
+                      type="radio"
+                      name="messagingPref"
+                      className="radio radio-primary"
+                      checked={authUser?.messagingPreference === 'everyone'}
+                      onChange={() => updateProfile({ messagingPreference: 'everyone' })}
+                    />
+                    <div>
+                      <p className="font-medium">Everyone</p>
+                      <p className="text-sm text-base-content/60">Anyone can send you messages</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Account Section */}
+          {activeSection === 'account' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Account Settings</h2>
+                <p className="text-base-content/60">Change your password</p>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Current Password</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-base-content/40" />
+                    </div>
+                    <input
+                      type={showCurrentPw ? "text" : "password"}
+                      className="input input-bordered w-full pl-10"
+                      placeholder="••••••••"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowCurrentPw(!showCurrentPw)}
+                    >
+                      {showCurrentPw ? <EyeOff className="h-5 w-5 text-base-content/40" /> : <Eye className="h-5 w-5 text-base-content/40" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">New Password</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-base-content/40" />
+                    </div>
+                    <input
+                      type={showNewPw ? "text" : "password"}
+                      className="input input-bordered w-full pl-10"
+                      placeholder="••••••••"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                      minLength={6}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowNewPw(!showNewPw)}
+                    >
+                      {showNewPw ? <EyeOff className="h-5 w-5 text-base-content/40" /> : <Eye className="h-5 w-5 text-base-content/40" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-medium">Confirm New Password</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-base-content/40" />
+                    </div>
+                    <input
+                      type={showNewPw ? "text" : "password"}
+                      className={`input input-bordered w-full pl-10 ${passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword ? 'input-error' : ''}`}
+                      placeholder="••••••••"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  {passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                    <label className="label">
+                      <span className="label-text-alt text-error">Passwords don't match</span>
+                    </label>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    isChangingPassword ||
+                    passwordForm.newPassword.length < 6 ||
+                    passwordForm.newPassword !== passwordForm.confirmPassword
+                  }
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Changing...
+                    </>
+                  ) : (
+                    "Change Password"
+                  )}
+                </button>
+              </form>
             </div>
           )}
 

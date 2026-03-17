@@ -48,7 +48,7 @@ const eventSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['social', 'professional', 'educational', 'entertainment', 'sports', 'other'],
+        enum: ['social', 'professional', 'educational', 'entertainment', 'sports', 'concert', 'food', 'nightlife', 'community', 'other'],
         default: 'other'
     },
     attendees: [{
@@ -70,10 +70,6 @@ const eventSchema = new mongoose.Schema({
         type: Number,
         default: null // null = unlimited
     },
-    isPrivate: {
-        type: Boolean,
-        default: false
-    },
     image: {
         type: String,
         default: ""
@@ -93,7 +89,6 @@ eventSchema.index({ "location.coordinates": "2dsphere" });
 eventSchema.index({ creator: 1, createdAt: -1 });
 eventSchema.index({ date: 1 });
 eventSchema.index({ category: 1 });
-eventSchema.index({ isPrivate: 1 });
 
 // Virtual for attendee count
 eventSchema.virtual('attendeeCount').get(function() {

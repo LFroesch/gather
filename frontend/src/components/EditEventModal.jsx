@@ -10,7 +10,6 @@ const EditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     endDate: '',
     category: 'social',
     maxAttendees: '',
-    isPrivate: false,
     venue: '',
     tags: [],
     image: null
@@ -26,6 +25,10 @@ const EditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
     { value: 'educational', label: 'Educational' },
     { value: 'entertainment', label: 'Entertainment' },
     { value: 'sports', label: 'Sports' },
+    { value: 'concert', label: 'Concert' },
+    { value: 'food', label: 'Food & Drink' },
+    { value: 'nightlife', label: 'Nightlife' },
+    { value: 'community', label: 'Community' },
     { value: 'other', label: 'Other' }
   ];
 
@@ -38,7 +41,6 @@ const EditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
         category: event.category || 'social',
         maxAttendees: event.maxAttendees || '',
-        isPrivate: event.isPrivate || false,
         venue: event.location?.venue || '',
         tags: event.tags || [],
         image: null
@@ -137,7 +139,6 @@ const EditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
         endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
         category: event.category || 'social',
         maxAttendees: event.maxAttendees || '',
-        isPrivate: event.isPrivate || false,
         venue: event.location?.venue || '',
         tags: event.tags || [],
         image: null
@@ -335,19 +336,6 @@ const EditEventModal = ({ isOpen, onClose, event, onUpdate }) => {
                 />
               </div>
             )}
-          </div>
-
-          {/* Privacy */}
-          <div className="form-control">
-            <label className="cursor-pointer flex items-center gap-3">
-              <input
-                type="checkbox"
-                className="checkbox"
-                checked={formData.isPrivate}
-                onChange={(e) => setFormData(prev => ({ ...prev, isPrivate: e.target.checked }))}
-              />
-              <span className="label-text">Make this event private (invite only)</span>
-            </label>
           </div>
 
           {/* Submit Buttons */}

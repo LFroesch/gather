@@ -1,22 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users } from "lucide-react";
+import { Users, Search, X } from "lucide-react";
 
 const Sidebar = () => {
-  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
-
+  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading, searchAllUsers, perUserUnread, getUnreadCounts } = useChatStore();
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
     getUsers();
-  }, [getUsers]);
+    getUnreadCounts();
+  }, [getUsers, getUnreadCounts]);
 
-  const filteredUsers = showOnlineOnly
-    ? users.filter((user) => onlineUsers.includes(user._id))
-    : users;
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    timeoutRef.current = setTimeout(async () => {
+      const results = await searchAllUsers(query);
+      setSearchResults(results);
+      setIsSearching(false);
+    }, 500);
+  }, [searchAllUsers]);
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
+  const displayUsers = searchQuery.length >= 2 ? searchResults : users;
+  const filteredUsers = (showOnlineOnly
+    ? displayUsers.filter((user) => onlineUsers.includes(user._id))
+    : displayUsers
+  ).toSorted((a, b) => {
+    // Unread messages first
+    const unreadDiff = (perUserUnread[b._id] || 0) - (perUserUnread[a._id] || 0);
+    if (unreadDiff !== 0) return unreadDiff;
+    // Then by most recent message
+    return (new Date(b.lastMessageAt || 0)) - (new Date(a.lastMessageAt || 0));
+  });
 
   if (isUsersLoading) return <SidebarSkeleton />;
 
@@ -27,7 +62,28 @@ const Sidebar = () => {
           <Users className="size-6" />
           <span className="font-medium hidden lg:block">Contacts</span>
         </div>
-        {/* TODO: Online filter toggle */}
+
+        {/* Search input */}
+        <div className="mt-3 hidden lg:block relative">
+          <input
+            type="text"
+            placeholder="Search users..."
+            className="input input-bordered input-sm w-full pr-8"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+          {searchQuery ? (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2"
+              onClick={clearSearch}
+            >
+              <X className="w-4 h-4 text-base-content/60" />
+            </button>
+          ) : (
+            <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
+          )}
+        </div>
+
         <div className="mt-3 hidden lg:flex items-center gap-2">
           <label className="cursor-pointer flex items-center gap-2">
             <input
@@ -38,12 +94,18 @@ const Sidebar = () => {
             />
             <span className="text-sm">Show online only</span>
           </label>
-          <span className="text-xs text-zinc-500">({onlineUsers.length - 1} online)</span>
+          <span className="text-xs text-base-content/50">({displayUsers.filter((u) => onlineUsers.includes(u._id)).length} online)</span>
         </div>
       </div>
 
       <div className="overflow-y-auto w-full py-3">
-        {filteredUsers.map((user) => (
+        {isSearching && (
+          <div className="flex justify-center py-4">
+            <span className="loading loading-spinner loading-sm"></span>
+          </div>
+        )}
+
+        {!isSearching && filteredUsers.map((user) => (
           <button
             key={user._id}
             onClick={() => setSelectedUser(user)}
@@ -56,29 +118,41 @@ const Sidebar = () => {
             <div className="relative mx-auto lg:mx-0">
               <img
                 src={user.profilePic || "/avatar.png"}
-                alt={user.name}
+                alt={user.fullName}
                 className="size-12 object-cover rounded-full"
               />
               {onlineUsers.includes(user._id) && (
                 <span
-                  className="absolute bottom-0 right-0 size-3 bg-green-500 
-                  rounded-full ring-2 ring-zinc-900"
+                  className="absolute bottom-0 right-0 size-3 bg-green-500
+                  rounded-full ring-2 ring-base-100"
                 />
+              )}
+              {perUserUnread[user._id] > 0 && (
+                <span className="absolute -top-1 -right-1 badge badge-primary badge-xs text-[10px] px-1 min-w-[16px] lg:hidden">
+                  {perUserUnread[user._id]}
+                </span>
               )}
             </div>
 
-            {/* User info - only visible on larger screens */}
-            <div className="hidden lg:block text-left min-w-0">
-              <div className="font-medium truncate">{user.fullName}</div>
-              <div className="text-sm text-zinc-400">
+            <div className="hidden lg:block text-left min-w-0 flex-1">
+              <div className="font-medium truncate">@{user.username}</div>
+              <div className="text-sm text-base-content/50">
                 {onlineUsers.includes(user._id) ? "Online" : "Offline"}
               </div>
             </div>
+
+            {perUserUnread[user._id] > 0 && (
+              <span className="badge badge-primary badge-sm">
+                {perUserUnread[user._id]}
+              </span>
+            )}
           </button>
         ))}
 
-        {filteredUsers.length === 0 && (
-          <div className="text-center text-zinc-500 py-4">No online users</div>
+        {!isSearching && filteredUsers.length === 0 && (
+          <div className="text-center text-base-content/50 py-4">
+            {searchQuery.length >= 2 ? "No users found" : "No friends yet"}
+          </div>
         )}
       </div>
     </aside>

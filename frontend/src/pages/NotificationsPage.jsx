@@ -1,27 +1,33 @@
 import { useState, useEffect } from 'react';
-import { 
-  Bell, 
-  Heart, 
-  UserPlus, 
-  Calendar, 
-  MessageSquare, 
-  Check, 
+import {
+  Bell,
+  Heart,
+  UserPlus,
+  UserCheck,
+  Calendar,
+  MessageSquare,
+  Check,
   CheckCheck,
-  Trash2 
+  Trash2,
+  X,
+  BarChart3
 } from 'lucide-react';
 import { useNotificationStore } from '../store/useFollowStore';
+import { useFriendStore } from '../store/useFriendStore';
 import { Link } from 'react-router-dom';
 
 const NotificationsPage = () => {
-  const { 
-    notifications, 
-    unreadCount, 
+  const {
+    notifications,
+    unreadCount,
     isLoading,
     getNotifications,
     markAsRead,
     markAllAsRead,
-    deleteNotification
+    deleteNotification,
+    clearAllNotifications
   } = useNotificationStore();
+  const { acceptFriendRequest, rejectFriendRequest, friendStatus } = useFriendStore();
 
   const [filter, setFilter] = useState('all'); // all, unread, read
 
@@ -41,13 +47,24 @@ const NotificationsPage = () => {
       case 'follow':
         return <UserPlus className={`${iconClass} text-blue-500`} />;
       case 'like_post':
+      case 'like_comment':
         return <Heart className={`${iconClass} text-red-500`} />;
+      case 'comment':
+        return <MessageSquare className={`${iconClass} text-blue-400`} />;
+      case 'reply':
+        return <MessageSquare className={`${iconClass} text-indigo-400`} />;
       case 'event_invite':
       case 'event_rsvp':
       case 'new_event_nearby':
         return <Calendar className={`${iconClass} text-green-500`} />;
       case 'message':
         return <MessageSquare className={`${iconClass} text-purple-500`} />;
+      case 'friend_request':
+        return <UserPlus className={`${iconClass} text-blue-500`} />;
+      case 'friend_accept':
+        return <UserCheck className={`${iconClass} text-green-500`} />;
+      case 'poll_pending':
+        return <BarChart3 className={`${iconClass} text-orange-500`} />;
       default:
         return <Bell className={`${iconClass} text-gray-500`} />;
     }
@@ -58,13 +75,23 @@ const NotificationsPage = () => {
       case 'follow':
         return `/profile/${notification.sender.username}`;
       case 'like_post':
-        return notification.relatedPost ? `/posts/${notification.relatedPost._id}` : null;
+      case 'comment':
+      case 'like_comment':
+      case 'reply':
+        return notification.relatedPost ? `/posts/${notification.relatedPost._id}`
+             : notification.relatedEvent ? `/events/${notification.relatedEvent._id}`
+             : null;
       case 'event_invite':
       case 'event_rsvp':
       case 'new_event_nearby':
         return notification.relatedEvent ? `/events/${notification.relatedEvent._id}` : null;
       case 'message':
         return '/messages';
+      case 'poll_pending':
+        return '/admin';
+      case 'friend_request':
+      case 'friend_accept':
+        return `/profile/${notification.sender.username}`;
       default:
         return null;
     }
@@ -108,43 +135,74 @@ const NotificationsPage = () => {
   };
 
   const NotificationItem = ({ notification }) => {
+    if (!notification.sender) return null;
+
     const link = getNotificationLink(notification);
     const NotificationContent = () => (
       <div className={`p-4 border-l-4 transition-colors ${
-        notification.isRead 
-          ? 'border-base-300 bg-base-100' 
+        notification.isRead
+          ? 'border-base-300 bg-base-100'
           : 'border-primary bg-primary/5'
       }`}>
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 mt-1">
             {getNotificationIcon(notification.type)}
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <div className="avatar">
                 <div className="w-8 h-8 rounded-full">
-                  <img 
-                    src={notification.sender.profilePic || '/avatar.png'} 
+                  <img
+                    src={notification.sender.profilePic || '/avatar.png'}
                     alt={notification.sender.fullName}
                   />
                 </div>
               </div>
               <span className="font-medium text-sm">
                 {notification.sender.fullName}
+                <span className="text-xs text-base-content/50 font-normal ml-1">@{notification.sender.username}</span>
               </span>
               {!notification.isRead && (
                 <div className="w-2 h-2 bg-primary rounded-full"></div>
               )}
             </div>
-            
+
             <p className="text-sm text-base-content/80 mb-2">
               {notification.message}
             </p>
-            
+
             <div className="text-xs text-base-content/60">
               {formatTime(notification.createdAt)}
             </div>
+
+            {/* Inline friend request actions */}
+            {notification.type === 'friend_request' && friendStatus[notification.sender._id] !== 'friends' && (
+              <div className="flex gap-2 mt-2">
+                <button
+                  className="btn btn-success btn-xs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    acceptFriendRequest(notification.sender._id);
+                    markAsRead(notification._id);
+                  }}
+                >
+                  <Check className="w-3 h-3" /> Accept
+                </button>
+                <button
+                  className="btn btn-outline btn-xs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    rejectFriendRequest(notification.sender._id);
+                    markAsRead(notification._id);
+                  }}
+                >
+                  <X className="w-3 h-3" /> Decline
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-1">
@@ -181,10 +239,10 @@ const NotificationsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen pt-20 pb-20">
+      <div className="container mx-auto px-4 max-w-4xl animate-fade-up">
         {/* Header */}
-        <div className="bg-base-100 rounded-xl shadow-lg p-6 mb-6">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -198,19 +256,30 @@ const NotificationsPage = () => {
               )}
             </div>
             
-            {unreadCount > 0 && (
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={markAllAsRead}
-              >
-                <CheckCheck className="w-4 h-4" />
-                Mark All Read
-              </button>
-            )}
+            <div className="flex gap-2">
+              {unreadCount > 0 && (
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={markAllAsRead}
+                >
+                  <CheckCheck className="w-4 h-4" />
+                  Mark All Read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  className="btn btn-outline btn-sm btn-error"
+                  onClick={clearAllNotifications}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear All
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Filter Tabs */}
-          <div className="tabs tabs-boxed">
+          <div className="tabs tabs-boxed bg-base-100 shadow border-2 border-base-300 font-bold">
             <button
               className={`tab ${filter === 'all' ? 'tab-active' : ''}`}
               onClick={() => setFilter('all')}
@@ -233,7 +302,7 @@ const NotificationsPage = () => {
         </div>
 
         {/* Notifications List */}
-        <div className="bg-base-100 rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 overflow-hidden">
           {isLoading ? (
             <div className="flex justify-center py-8">
               <span className="loading loading-spinner loading-lg"></span>

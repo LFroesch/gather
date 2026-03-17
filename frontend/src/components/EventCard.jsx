@@ -1,14 +1,16 @@
-import { Calendar, MapPin, Users, Clock, Lock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import ReportButton from './ReportButton';
 import { Link } from 'react-router-dom';
 import { formatDistance } from '../lib/utils';
 
 const EventCard = ({ event, showRSVPStatus = false }) => {
+  const isPast = new Date(event.date) < new Date();
+
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
     });
   };
 
@@ -27,101 +29,166 @@ const EventCard = ({ event, showRSVPStatus = false }) => {
       educational: 'badge-accent',
       entertainment: 'badge-info',
       sports: 'badge-success',
+      concert: 'badge-warning',
+      food: 'badge-secondary',
+      nightlife: 'badge-accent',
+      community: 'badge-info',
       other: 'badge-neutral'
     };
     return colors[category] || 'badge-neutral';
   };
 
-  return (
-    <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
-      <div className="card-body">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className="card-title text-lg">{event.title}</h3>
-              <div className={`badge ${getCategoryColor(event.category)}`}>
-                {event.category}
-              </div>
-              {event.isPrivate && (
-                <div className="badge badge-warning gap-1">
-                  <Lock className="w-3 h-3" />
-                  Invite Only
-                </div>
-              )}
-              {showRSVPStatus && (
-                <div className="badge badge-success">
-                  Attending
-                </div>
-              )}
-            </div>
-            
-            <p className="text-base-content/70 mb-3 line-clamp-2">
-              {event.description}
-            </p>
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    [event.location.venue, event.location.city, event.location.state].filter(Boolean).join(', ')
+  )}`;
 
-            <div className="flex flex-wrap gap-4 text-sm text-base-content/60">
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>{formatDate(event.date)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                <span>{formatTime(event.date)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span>{event.location.city}, {event.location.state}</span>
-                {event.distanceInMiles !== undefined && event.distanceInMiles > 0 && (
-                  <span className="text-primary">
-                    ({formatDistance(event.distanceInMiles)})
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>{event.attendeeCount || 0} attending</span>
-              </div>
-            </div>
+  const shortLocation = event.location.venue
+    ? `${event.location.venue}, ${event.location.city}`
+    : `${event.location.city}, ${event.location.state}`;
 
-            {event.location.venue && (
-              <div className="mt-2 text-sm text-base-content/60">
-                📍 {event.location.venue}
-              </div>
-            )}
+  if (!event.creator) return null;
 
-            <div className="flex items-center gap-2 mt-3">
-              <div className="avatar">
-                <div className="w-6 h-6 rounded-full">
-                  <img 
-                    src={event.creator.profilePic || '/avatar.png'} 
-                    alt={event.creator.fullName}
-                  />
-                </div>
-              </div>
-              <span className="text-sm text-base-content/60">
-                Created by {event.creator.fullName}
-              </span>
-            </div>
+  // ── Card WITH image ── image top, info below ──
+  if (event.image) {
+    return (
+      <div className="card card-lift bg-base-100 shadow-md overflow-hidden">
+        <Link to={`/events/${event._id}`} className="block">
+          <div className="h-56 overflow-hidden">
+            <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+          </div>
+        </Link>
+
+        <div className="px-4 py-3 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Link to={`/events/${event._id}`} className="hover:text-primary transition-colors">
+              <h3 className="font-bold text-base-content text-lg leading-tight">{event.title}</h3>
+            </Link>
+            <span className={`badge badge-sm font-medium ${getCategoryColor(event.category)}`}>
+              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
+            </span>
+            {isPast && <span className="badge badge-sm badge-error">Ended</span>}
+            {showRSVPStatus && <span className="badge badge-sm badge-success">Attending</span>}
           </div>
 
-          {event.image && (
-            <div className="ml-4">
-              <img 
-                src={event.image} 
-                alt={event.title}
-                className="w-24 h-24 object-cover rounded-lg"
-              />
+          <p className="text-sm text-base-content/70 line-clamp-2">{event.description}</p>
+
+          <div className="flex items-center justify-between">
+            <Link
+              to={`/profile/${event.creator.username}`}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="avatar">
+                <div className="w-6 h-6 rounded-full">
+                  <img src={event.creator.profilePic || '/avatar.png'} alt={event.creator.fullName} />
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold text-xs leading-tight">{event.creator.fullName}</span>
+                <div className="text-xs text-base-content/50">@{event.creator.username}</div>
+              </div>
+            </Link>
+            <div className="flex items-center gap-2">
+              <ReportButton contentType="event" contentId={event._id} />
+              <Link to={`/events/${event._id}`} className="btn btn-primary btn-xs">View</Link>
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="card-actions justify-end mt-4">
-          <Link 
-            to={`/events/${event._id}`}
-            className="btn btn-primary btn-sm"
+        {/* Footer banner */}
+        <div className="bg-primary/10 px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
           >
-            View Details
-          </Link>
+            <MapPin className="w-4 h-4" />
+            {shortLocation}
+          </a>
+          {event.distanceInMiles !== undefined && event.distanceInMiles > 0 && (
+            <span className="text-xs text-base-content/50">{formatDistance(event.distanceInMiles)} away</span>
+          )}
+          <span className="flex items-center gap-1 text-xs text-base-content/50 ml-auto">
+            <Calendar className="w-3.5 h-3.5" />
+            {formatDate(event.date)} · {formatTime(event.date)}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-base-content/50">
+            <Users className="w-3.5 h-3.5" />
+            {event.attendeeCount || 0}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Card WITHOUT image ── date accent + compact row ──
+  const eventDate = new Date(event.date);
+  const monthShort = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const dayNum = eventDate.getDate();
+
+  return (
+    <div className="card card-lift bg-base-100 shadow-md overflow-hidden">
+      <div className="flex">
+        {/* Date block */}
+        <div className="flex flex-col items-center justify-center bg-primary/10 px-5 py-4 border-r border-base-300">
+          <span className="text-xs font-bold text-primary tracking-wide">{monthShort}</span>
+          <span className="text-2xl font-extrabold text-primary leading-none">{dayNum}</span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 px-4 py-3 flex flex-col gap-2 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Link to={`/events/${event._id}`} className="hover:text-primary transition-colors">
+              <h3 className="font-bold text-base-content text-base leading-tight">{event.title}</h3>
+            </Link>
+            <span className={`badge badge-sm font-medium ${getCategoryColor(event.category)}`}>
+              {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
+            </span>
+            {isPast && <span className="badge badge-sm badge-error">Ended</span>}
+            {showRSVPStatus && <span className="badge badge-sm badge-success">Attending</span>}
+          </div>
+
+          <p className="text-sm text-base-content/60 line-clamp-1">{event.description}</p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+            >
+              <MapPin className="w-4 h-4" />
+              {shortLocation}
+            </a>
+            {event.distanceInMiles !== undefined && event.distanceInMiles > 0 && (
+              <span className="text-xs text-base-content/50">{formatDistance(event.distanceInMiles)} away</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Link
+              to={`/profile/${event.creator.username}`}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="avatar">
+                <div className="w-6 h-6 rounded-full">
+                  <img src={event.creator.profilePic || '/avatar.png'} alt={event.creator.fullName} />
+                </div>
+              </div>
+              <div>
+                <span className="font-semibold text-xs leading-tight">{event.creator.fullName}</span>
+                <div className="text-xs text-base-content/50">@{event.creator.username}</div>
+              </div>
+            </Link>
+            <div className="flex items-center gap-2">
+              <ReportButton contentType="event" contentId={event._id} />
+              <Link to={`/events/${event._id}`} className="btn btn-primary btn-xs">View</Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

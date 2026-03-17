@@ -97,7 +97,12 @@ const LoginPage = () => {
             </button>
           </form>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
+            <p>
+              <Link to="/forgot-password" className="link link-primary text-sm">
+                Forgot your password?
+              </Link>
+            </p>
             <p className="text-base-content/60">
               Don&apos;t have an account?{" "}
               <Link to="/signup" className="link link-primary">
@@ -110,8 +115,8 @@ const LoginPage = () => {
 
       {/* Right Side - Image/Pattern */}
       <AuthImagePattern
-        title={"Welcome back!"}
-        subtitle={"Sign in to continue your conversations and catch up with your messages."}
+        title="Welcome back"
+        subtitle="See what's new in your area and catch up with your community."
       />
     </div>
   );

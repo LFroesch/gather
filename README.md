@@ -1,113 +1,126 @@
-# Event Chat 🎉
-A location-based social platform built with React and Node.js featuring real-time messaging, event creation, and social networking capabilities.
+# Gather
+
+Gather is a location-based social app I built to help people find events, share posts, and connect with others in their area. Think of it like a neighborhood bulletin board with real-time chat, polls, and a song voting feature thrown in.
 
 ## Tech Stack
-- **Frontend:** React, Tailwind CSS + DaisyUI, React Router, Socket.IO Client, Zustand
-- **Backend:** Node.js, Express, MongoDB, Socket.IO, JWT Authentication, Mongoose
-- **File Upload:** Cloudinary integration for images
-- **Geolocation:** MongoDB geospatial queries for location-based features
-- **Real-time:** Socket.IO for messaging and notifications
 
-## Quick Start
-1. **Install dependencies**
+| Layer | Tech |
+|-------|------|
+| Frontend | React 18, Zustand, Tailwind + DaisyUI, React Router |
+| Backend | Node.js, Express, Mongoose |
+| Database | MongoDB (with geospatial indexes for location queries) |
+| Real-time | Socket.IO for chat and live notifications |
+| Auth | JWT stored in httpOnly cookies, role-based access |
+| File uploads | Cloudinary |
+| Geocoding | Nominatim (free, no API key needed) |
+| Email | Resend (password resets) |
+
+## What it does
+
+**Events** — Create events with images, categories, and capacity limits. RSVP as yes/maybe/no. Invite friends. Comment and reply on events. Everything is scoped to your area using MongoDB `$geoNear`, so you only see stuff nearby.
+
+**Posts** — Share text or image posts tied to your location. Like, comment, tag a venue. Short text-only posts get a different "thought bubble" layout, longer ones look more like tweets.
+
+**Real-time messaging** — DM friends through Socket.IO. Online/offline indicators, image sharing. Messaging is gated behind friendship by default (configurable in settings).
+
+**Friends & follows** — Following is one-way (see their content). Friendship is mutual (unlocks DMs). Friend requests show up in notifications with accept/reject buttons.
+
+**Community polls** — Create polls with 2-4 options, tied to a location and category. Polls need admin approval before they go live. Filter by active, expired, or your own.
+
+**Song voting** — Submit songs, vote once per day, see a live leaderboard. Historical daily charts with date navigation.
+
+**Search** — Search events, posts, and users with geo filtering. Scope results to "nearby" or "following." All three queries fire in parallel.
+
+**Admin dashboard** — Platform stats, user management (roles, bans), report review queue, poll approval, song moderation.
+
+**Notifications** — Real-time notifications for RSVPs, comments, replies, friend requests, follows, event invites, and poll approvals. Inline accept/reject for friend requests. Clear all button.
+
+**Other stuff** — 32 theme options, profanity filter, HTML sanitization, content reporting, password reset via email, configurable search radius, mobile-responsive with bottom nav.
+
+## Project structure
+
+```
+gather/
+├── backend/src/
+│   ├── controllers/    # request handlers
+│   ├── models/         # mongoose schemas
+│   ├── routes/         # express routers
+│   ├── middleware/      # auth + admin guards
+│   └── lib/            # db, socket.io, cloudinary, email, utils
+├── frontend/src/
+│   ├── pages/          # route-level components
+│   ├── components/     # shared UI
+│   ├── store/          # zustand stores
+│   └── lib/            # axios instance, helpers
+└── package.json        # root scripts
+```
+
+## Why I made these choices
+
+- **Zustand instead of Redux** — way less boilerplate for a project this size, and the API is nicer to work with
+- **httpOnly cookies for JWT** — tokens can't be stolen via XSS like they can from localStorage
+- **MongoDB geospatial indexes** — `$geoNear` handles proximity queries natively, no need for a separate geo service
+- **Socket.IO rooms** — each user gets their own room, makes it easy to target messages and track presence
+
+## API overview
+
+The full API has ~50 endpoints across these route groups. Here are the main ones:
+
+| Route group | What it covers |
+|-------------|----------------|
+| `/api/auth` | Signup, login, logout, profile updates, password reset |
+| `/api/events` | CRUD, RSVP, invites, nearby/following/search queries |
+| `/api/posts` | CRUD, likes, nearby/following/search queries |
+| `/api/messages` | Conversations list, message history, send messages |
+| `/api/follow` | Follow/unfollow, notifications |
+| `/api/friends` | Friend requests, accept/reject/remove |
+| `/api/geo` | Location updates, city search, radius settings |
+| `/api/polls` | CRUD, voting, admin approval |
+| `/api/voting` | Song submission, daily votes, charts, stats |
+| `/api/comments` | Comments on posts/events, replies, likes |
+| `/api/reports` | Submit + review reports |
+| `/api/admin` | Dashboard stats, user/song management, role changes |
+
+## Getting started
+
+You'll need Node 18+, a MongoDB instance ([Atlas free tier](https://www.mongodb.com/atlas) works), and a [Cloudinary](https://cloudinary.com/) account.
+
+1. Clone and install:
+
    ```bash
-   # Backend
-   cd backend
-   npm install
-   
-   # Frontend
-   cd frontend
-   npm install
+   git clone https://github.com/LFroesch/gather.git
+   cd gather
+   npm install && cd backend && npm install && cd ../frontend && npm install
    ```
 
-2. **Setup environment**
-   
-   Create `.env` in backend directory:
+2. Create `backend/.env`:
+
    ```env
-   MONGODB_URI=your_mongodb_connection_string
-   PORT=5000
-   JWT_SECRET=your_jwt_secret
-   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-   CLOUDINARY_API_KEY=your_cloudinary_api_key
-   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   MONGODB_URI=your_mongodb_uri
+   PORT=5001
+   JWT_SECRET=pick_something_random
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_key
+   CLOUDINARY_API_SECRET=your_secret
    NODE_ENV=development
+   CLIENT_URL=http://localhost:5173
+   RESEND_API_KEY=your_resend_key          # optional, for password reset emails
+   RESEND_FROM_EMAIL=Gather <noreply@yourdomain.com>
    ```
 
-3. **Run the app**
+3. Run it:
+
    ```bash
-   # Backend
-   cd backend
-   npm run dev
-   
-   # Frontend (new terminal)
-   cd frontend
-   npm run dev
+   npm run dev   # starts backend (5001) + frontend (5173)
    ```
 
-App runs on `http://localhost:5173` 🚀
+### Production build
 
-## Features
+```bash
+npm run build   # installs deps + builds frontend
+npm start       # serves backend + static frontend
+```
 
-### 🌍 Location-Based Discovery
-- Set your location for personalized content
-- Discover events and posts within customizable radius (5-100 miles)
-- Real-time distance calculations and display
+## License
 
-### 📅 Event Management
-- Create and manage events with rich details
-- RSVP system (Yes/Maybe/No responses)
-- Event categories and tagging
-- Invite friends to events
-- Location-based event discovery
-
-### 💬 Social Features
-- Real-time messaging with Socket.IO
-- Follow/unfollow users
-- Like and comment on posts
-- User profiles with bios and avatars
-- Post creation with image support
-
-### 🔔 Notifications
-- Real-time notifications for follows, likes, and event invites
-- Mark as read/unread functionality
-- Event RSVP notifications
-
-### 🎨 User Experience
-- Multiple theme options (30+ DaisyUI themes)
-- Responsive design for all devices
-- Online/offline status indicators
-- Image upload and sharing
-- Search functionality for users and locations
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/check` - Check auth status
-- `PUT /api/auth/update-profile` - Update profile
-
-### Events
-- `GET /api/events/nearby` - Get nearby events
-- `GET /api/events/my-events` - Get user's events
-- `POST /api/events` - Create new event
-- `PUT /api/events/:id` - Update event
-- `DELETE /api/events/:id` - Delete event
-- `POST /api/events/:id/rsvp` - RSVP to event
-
-### Posts
-- `GET /api/posts/nearby` - Get nearby posts
-- `GET /api/posts/following` - Get following feed
-- `POST /api/posts` - Create new post
-- `POST /api/posts/:id/like` - Like/unlike post
-
-### Social
-- `POST /api/follow/follow/:userId` - Follow user
-- `POST /api/follow/unfollow/:userId` - Unfollow user
-- `GET /api/follow/notifications` - Get notifications
-
-### Location
-- `PUT /api/geo/current-location` - Update current location
-- `GET /api/geo/search-cities` - Search for cities
-- `PUT /api/geo/settings` - Update location settings
+[AGPL-3.0](LICENSE) — Lucas Froeschner, 2026

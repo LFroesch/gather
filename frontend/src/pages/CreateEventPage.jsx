@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Clock, Image, X } from 'lucide-react';
 import { useEventStore } from '../store/useEventStore';
 import { useLocationStore } from '../store/useLocationStore';
+import LocationPicker from '../components/LocationPicker';
 import toast from 'react-hot-toast';
 
 const CreateEventPage = () => {
@@ -17,10 +18,10 @@ const CreateEventPage = () => {
     endDate: '',
     category: 'social',
     maxAttendees: '',
-    isPrivate: false,
     venue: '',
     tags: [],
-    image: null
+    image: null,
+    location: null
   });
 
   const [imagePreview, setImagePreview] = useState(null);
@@ -32,6 +33,10 @@ const CreateEventPage = () => {
     { value: 'educational', label: 'Educational' },
     { value: 'entertainment', label: 'Entertainment' },
     { value: 'sports', label: 'Sports' },
+    { value: 'concert', label: 'Concert' },
+    { value: 'food', label: 'Food & Drink' },
+    { value: 'nightlife', label: 'Nightlife' },
+    { value: 'community', label: 'Community' },
     { value: 'other', label: 'Other' }
   ];
 
@@ -104,6 +109,11 @@ const CreateEventPage = () => {
       return;
     }
 
+    if (!formData.location) {
+      toast.error('Please select a location');
+      return;
+    }
+
     try {
       const eventData = {
         ...formData,
@@ -120,9 +130,9 @@ const CreateEventPage = () => {
 
   if (!isLocationSet()) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="min-h-screen pt-20">
         <div className="container mx-auto px-4 max-w-2xl">
-          <div className="bg-base-100 rounded-xl shadow-lg p-6 text-center">
+          <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 text-center">
             <MapPin className="w-12 h-12 mx-auto text-warning mb-4" />
             <h2 className="text-xl font-bold mb-2">Location Required</h2>
             <p className="text-base-content/60 mb-4">
@@ -141,9 +151,9 @@ const CreateEventPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20">
-      <div className="container mx-auto px-4 max-w-2xl">
-        <div className="bg-base-100 rounded-xl shadow-lg p-6">
+    <div className="min-h-screen pt-20">
+      <div className="container mx-auto px-4 max-w-2xl animate-fade-up">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
           <h1 className="text-2xl font-bold mb-6">Create New Event</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -238,26 +248,27 @@ const CreateEventPage = () => {
               </div>
             </div>
 
-            {/* Venue */}
+            {/* Location */}
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">Venue</span>
+                <span className="label-text font-medium">Location *</span>
               </label>
-              <input
-                type="text"
-                className="input input-bordered"
-                placeholder="Specific venue or address"
-                value={formData.venue}
-                onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
+              <LocationPicker
+                onLocationSelect={(loc) => {
+                  if (loc) {
+                    setFormData(prev => ({
+                      ...prev,
+                      location: { city: loc.city, state: loc.state, country: loc.country, coordinates: loc.coordinates },
+                      venue: loc.placeName || prev.venue
+                    }));
+                  } else {
+                    setFormData(prev => ({ ...prev, location: null }));
+                  }
+                }}
+                initialLocation={currentLocation}
+                showPlaceName={true}
+                placeholderPlace="Venue name or address"
               />
-              <br/>
-              {/* Location Display */}
-                <div className="alert alert-info">
-                <MapPin className="w-4 h-4" />
-                <span>
-                    This event will be located in: {currentLocation?.city}, {currentLocation?.state}
-                </span>
-                </div>
             </div>
 
             {/* Tags */}
@@ -330,25 +341,12 @@ const CreateEventPage = () => {
               )}
             </div>
 
-            {/* Privacy */}
-            <div className="form-control">
-              <label className="cursor-pointer flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  className="checkbox"
-                  checked={formData.isPrivate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isPrivate: e.target.checked }))}
-                />
-                <span className="label-text">Make this event private (invite only)</span>
-              </label>
-            </div>
-
             {/* Submit Buttons */}
             <div className="flex gap-4 pt-4">
               <button
                 type="button"
                 className="btn btn-outline flex-1"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/events')}
               >
                 Cancel
               </button>

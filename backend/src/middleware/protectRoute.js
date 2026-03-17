@@ -21,11 +21,15 @@ export const protectRoute = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    if (user.isBanned) {
+      return res.status(403).json({ message: "Your account has been banned" });
+    }
+
     req.user = user;
 
     next();
   } catch (error) {
-    console.log("Error in protectRoute middleware: ", error.message);
+    console.error("Error in protectRoute middleware: ", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };

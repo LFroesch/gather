@@ -1,7 +1,9 @@
-import { generateToken } from "../lib/utils.js";
+import { generateToken, validateImage } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import cloudinary from "../lib/cloudinary.js";
+import { sendPasswordResetEmail } from "../lib/email.js";
 
 export const signup = async (req, res) => {
   const { fullName, email, password, username } = req.body;
@@ -70,13 +72,15 @@ export const signup = async (req, res) => {
         currentCity: newUser.currentCity,
         followers: newUser.followers,
         following: newUser.following,
+        friends: newUser.friends,
+        messagingPreference: newUser.messagingPreference,
         createdAt: newUser.createdAt,
       });
     } else {
       res.status(400).json({ message: "Invalid user data" });
     }
   } catch (error) {
-    console.log("Error in signup controller", error.message);
+    console.error("Error in signup controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -95,6 +99,10 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    if (user.isBanned) {
+      return res.status(403).json({ message: "Your account has been banned" });
+    }
+
     generateToken(user._id, res);
 
     res.status(200).json({
@@ -108,10 +116,12 @@ export const login = async (req, res) => {
       currentCity: user.currentCity,
       followers: user.followers,
       following: user.following,
+      friends: user.friends,
+      messagingPreference: user.messagingPreference,
       createdAt: user.createdAt,
     });
   } catch (error) {
-    console.log("Error in login controller", error.message);
+    console.error("Error in login controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -121,19 +131,28 @@ export const logout = (req, res) => {
     res.cookie("jwt", "", { maxAge: 0 });
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
-    console.log("Error in logout controller", error.message);
+    console.error("Error in logout controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic, bio, username } = req.body;
+    const { profilePic, bio, username, messagingPreference } = req.body;
     const userId = req.user._id;
 
     const updateData = {};
 
+    if (messagingPreference !== undefined) {
+      if (!['friends_only', 'everyone'].includes(messagingPreference)) {
+        return res.status(400).json({ message: "Invalid messaging preference" });
+      }
+      updateData.messagingPreference = messagingPreference;
+    }
+
     if (profilePic) {
+      const { valid, error } = validateImage(profilePic);
+      if (!valid) return res.status(400).json({ message: error });
       const uploadResponse = await cloudinary.uploader.upload(profilePic);
       updateData.profilePic = uploadResponse.secure_url;
     }
@@ -170,7 +189,7 @@ export const updateProfile = async (req, res) => {
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    console.log("error in update profile:", error);
+    console.error("error in update profile:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -179,7 +198,7 @@ export const checkAuth = (req, res) => {
   try {
     res.status(200).json(req.user);
   } catch (error) {
-    console.log("Error in checkAuth controller", error.message);
+    console.error("Error in checkAuth controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -206,12 +225,110 @@ export const getUser = async (req, res) => {
     const userData = {
       ...user.toObject(),
       followerCount: user.followers.length,
-      followingCount: user.following.length
+      followingCount: user.following.length,
+      friendCount: (user.friends || []).length
     };
 
     res.status(200).json(userData);
   } catch (error) {
-    console.log("Error in getUser controller", error.message);
+    console.error("Error in getUser controller", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Forgot password — send reset email
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.status(200).json({ message: "If an account with that email exists, a reset link has been sent" });
+    }
+
+    // Generate token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    // Build reset URL
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
+
+    await sendPasswordResetEmail(user.email, resetUrl);
+
+    res.status(200).json({ message: "If an account with that email exists, a reset link has been sent" });
+  } catch (error) {
+    console.error("Error in forgotPassword controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Reset password with token
+export const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Error in resetPassword controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Change password (authenticated, requires current password)
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Both current and new passwords are required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters" });
+    }
+
+    const user = await User.findById(req.user._id);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error in changePassword controller:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -219,24 +336,51 @@ export const getUser = async (req, res) => {
 // Search users
 export const searchUsers = async (req, res) => {
   try {
-    const { q } = req.query;
-    
+    const { q, scope } = req.query;
+
     if (!q || q.length < 2) {
       return res.status(400).json({ message: "Search query must be at least 2 characters" });
     }
 
-    const users = await User.find({
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const textMatch = {
       $or: [
-        { username: { $regex: q, $options: 'i' } },
-        { fullName: { $regex: q, $options: 'i' } }
+        { username: { $regex: escaped, $options: 'i' } },
+        { fullName: { $regex: escaped, $options: 'i' } }
       ]
-    })
-    .select('fullName username profilePic')
-    .limit(20);
+    };
+
+    let filter = textMatch;
+
+    if (scope === 'following') {
+      filter = { ...textMatch, _id: { $in: req.user.following } };
+    } else if (scope === 'nearby') {
+      const user = req.user;
+      const searchLocation = user.locationSettings?.autoDetectLocation
+        ? user.currentCity?.coordinates
+        : user.locationSettings?.searchLocation?.coordinates;
+      const radiusInMiles = user.locationSettings?.nearMeRadius || 25;
+
+      if (searchLocation && searchLocation[0] !== 0) {
+        const radiusInRadians = radiusInMiles / 3959; // Earth radius in miles
+        filter = {
+          ...textMatch,
+          'currentCity.coordinates': {
+            $geoWithin: {
+              $centerSphere: [searchLocation, radiusInRadians]
+            }
+          }
+        };
+      }
+    }
+
+    const users = await User.find(filter)
+      .select('fullName username profilePic bio currentCity')
+      .limit(20);
 
     res.status(200).json(users);
   } catch (error) {
-    console.log("Error in searchUsers controller", error.message);
+    console.error("Error in searchUsers controller", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };

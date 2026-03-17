@@ -5,7 +5,6 @@ import {
   MapPin, 
   Users, 
   Clock,
-  Lock, 
   User, 
   UserPlus,
   Share,
@@ -19,6 +18,7 @@ import { useLocationStore } from '../store/useLocationStore';
 import { formatDistance } from '../lib/utils';
 import ShareModal from '../components/ShareModal';
 import EditEventModal from '../components/EditEventModal';
+import CommentSection from '../components/CommentSection';
 import toast from 'react-hot-toast';
 
 const EventPage = () => {
@@ -144,6 +144,10 @@ const EventPage = () => {
       educational: 'badge-accent',
       entertainment: 'badge-info',
       sports: 'badge-success',
+      concert: 'badge-warning',
+      food: 'badge-secondary',
+      nightlife: 'badge-accent',
+      community: 'badge-info',
       other: 'badge-neutral'
     };
     return colors[category] || 'badge-neutral';
@@ -160,9 +164,9 @@ const EventPage = () => {
 
   if (isLoading || !selectedEvent) {
     return (
-      <div className="min-h-screen bg-base-200 pt-20">
+      <div className="min-h-screen pt-20">
         <div className="container mx-auto px-4 max-w-4xl">
-          <div className="bg-base-100 rounded-xl shadow-lg p-6">
+          <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
             <div className="animate-pulse space-y-4">
               <div className="h-8 bg-base-300 rounded w-3/4"></div>
               <div className="h-4 bg-base-300 rounded w-1/2"></div>
@@ -175,8 +179,11 @@ const EventPage = () => {
   };
 
   const event = selectedEvent;
-  // Better RSVP status detection - check attendees array first
-  const userAttendee = event.attendees?.find(attendee => 
+  if (!event.creator) return null;
+
+  // Filter out attendees with deleted users
+  const validAttendees = event.attendees?.filter(a => a.user) || [];
+  const userAttendee = validAttendees.find(attendee =>
     (attendee.user._id || attendee.user) === authUser._id
   );
   const userRSVP = userAttendee ? userAttendee.status : 'no';
@@ -184,15 +191,15 @@ const EventPage = () => {
   const isAttending = userRSVP === 'yes';
 
   return (
-    <div className="min-h-screen bg-base-200 pt-20 pb-20">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen pt-20 pb-20">
+      <div className="container mx-auto px-4 max-w-4xl animate-fade-up">
         {/* Event Header */}
-        <div className="bg-base-100 rounded-xl shadow-lg p-6 mb-6">
+        <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 mb-6">
           {event.image && (
             <img 
               src={event.image} 
               alt={event.title}
-              className="w-full h-64 object-cover rounded-lg mb-6"
+              className="w-full h-120 object-cover rounded-lg mb-6"
             />
           )}
 
@@ -203,12 +210,7 @@ const EventPage = () => {
                 <div className={`badge ${getCategoryColor(event.category)}`}>
                   {event.category}
                 </div>
-                  {event.isPrivate && (
-                    <div className="badge badge-warning gap-2">
-                      <Lock className="w-4 h-4" />
-                      Invite Only Event
-                    </div>
-                  )}
+
               </div>
 
               <p className="text-base-content/80 text-lg mb-4">{event.description}</p>
@@ -227,10 +229,17 @@ const EventPage = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      [event.location.venue, event.location.city, event.location.state].filter(Boolean).join(', ')
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                  >
                     <MapPin className="w-5 h-5 text-primary" />
                     <div>
-                      <div className="font-medium">
+                      <div className="font-medium hover:text-primary">
                         {event.location.city}, {event.location.state}
                         {eventDistance > 0 && (
                           <span className="text-primary ml-2"> ({formatDistance(eventDistance)})</span>
@@ -242,7 +251,7 @@ const EventPage = () => {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </a>
 
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-primary" />
@@ -262,11 +271,12 @@ const EventPage = () => {
                     <User className="w-5 h-5 text-primary" />
                     <div>
                       <div className="font-medium">Created by</div>
-                      <Link 
+                      <Link
                         to={`/profile/${event.creator.username}`}
                         className="text-sm text-primary hover:underline"
                       >
                         {event.creator.fullName}
+                        <span className="text-base-content/50 ml-1">@{event.creator.username}</span>
                       </Link>
                     </div>
                   </div>
@@ -354,10 +364,10 @@ const EventPage = () => {
 
         {/* Attendees */}
         {event.attendees && event.attendees.length > 0 && (
-          <div className="bg-base-100 rounded-xl shadow-lg p-6 mb-6">
+          <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 mb-6">
             <h2 className="text-xl font-bold mb-4">Attendees</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {event.attendees
+              {validAttendees
                 .filter(attendee => attendee.status === 'yes')
                 .map((attendee) => (
                   <div key={attendee.user._id} className="flex items-center gap-3">
@@ -385,6 +395,13 @@ const EventPage = () => {
             </div>
           </div>
         )}
+
+        {/* Comments Section */}
+        <CommentSection
+          parentType="event"
+          parentId={eventId}
+          parentOwnerId={event.creator?._id}
+        />
 
         {/* Edit Event Modal */}
         <EditEventModal

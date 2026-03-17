@@ -1,5 +1,6 @@
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
+import { Check, CheckCheck } from "lucide-react";
 
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -15,21 +16,28 @@ const ChatContainer = () => {
     selectedUser,
     subscribeToMessages,
     unsubscribeFromMessages,
+    markAsRead,
   } = useChatStore();
   const { authUser } = useAuthStore();
-  const messageEndRef = useRef(null);
+  const messageContainerRef = useRef(null);
 
   useEffect(() => {
-    getMessages(selectedUser._id);
+    if (!selectedUser?._id) return;
+    const init = async () => {
+      await getMessages(selectedUser._id);
+      markAsRead(selectedUser._id);
+    };
+    init();
 
     subscribeToMessages();
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser._id, getMessages, markAsRead, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
-    if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (messageContainerRef.current && messages) {
+      const container = messageContainerRef.current;
+      container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
 
@@ -47,12 +55,17 @@ const ChatContainer = () => {
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
+      <div ref={messageContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message, index) => {
+          const isOwnMessage = message.senderId === authUser._id;
+          const isLastOwnMessage =
+            isOwnMessage &&
+            !messages.slice(index + 1).some((m) => m.senderId === authUser._id);
+
+          return (
           <div
             key={message._id}
             className={`chat ${message.senderId === authUser._id ? "chat-end" : "chat-start"}`}
-            ref={messageEndRef}
           >
             <div className=" chat-image avatar">
               <div className="size-10 rounded-full border">
@@ -81,8 +94,18 @@ const ChatContainer = () => {
               )}
               {message.text && <p>{message.text}</p>}
             </div>
+            {isLastOwnMessage && (
+              <div className="chat-footer opacity-60">
+                {message.read ? (
+                  <CheckCheck className="w-3.5 h-3.5 text-primary inline" />
+                ) : (
+                  <Check className="w-3.5 h-3.5 inline" />
+                )}
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <MessageInput />

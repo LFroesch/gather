@@ -1,25 +1,27 @@
 import express from 'express';
 import { protectRoute } from '../middleware/protectRoute.js';
+import { sanitizeInput } from '../middleware/sanitize.js';
 import Event from '../models/event.model.js';
 import { Notification } from '../models/follow.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import { validateImage } from '../lib/utils.js';
 
 const router = express.Router();
 
 // Create a new event
-router.post("/", protectRoute, async (req, res) => {
+router.post("/", protectRoute, sanitizeInput(['title', 'description', 'venue', 'tags']), async (req, res) => {
   try {
-    const { 
-      title, 
-      description, 
-      date, 
+    const {
+      title,
+      description,
+      date,
       endDate,
-      category = 'other', 
+      category = 'other',
       maxAttendees,
-      isPrivate = false,
       venue,
       tags = [],
-      image 
+      image,
+      location: bodyLocation
     } = req.body;
     const userId = req.user._id;
 
@@ -31,8 +33,27 @@ router.post("/", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Location required. Please update your location in settings." });
     }
 
+    // Use provided location or fall back to user's city
+    let eventLocation = req.user.currentCity;
+    if (bodyLocation?.city && bodyLocation?.coordinates?.length === 2) {
+      // Validate within 100mi of user's city
+      const [lng1, lat1] = req.user.currentCity.coordinates;
+      const [lng2, lat2] = bodyLocation.coordinates;
+      const R = 3959;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
+      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      if (dist > 100) {
+        return res.status(400).json({ message: "Location must be within 100 miles of your city" });
+      }
+      eventLocation = bodyLocation;
+    }
+
     let imageUrl;
     if (image) {
+      const { valid, error } = validateImage(image);
+      if (!valid) return res.status(400).json({ message: error });
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
     }
@@ -42,14 +63,13 @@ router.post("/", protectRoute, async (req, res) => {
       description,
       creator: userId,
       location: {
-        ...req.user.currentCity,
+        ...eventLocation,
         venue
       },
       date: new Date(date),
       endDate: endDate ? new Date(endDate) : null,
       category,
       maxAttendees,
-      isPrivate,
       image: imageUrl,
       tags,
       attendees: [{ user: userId, status: 'yes' }] // Creator auto-attends
@@ -60,12 +80,12 @@ router.post("/", protectRoute, async (req, res) => {
 
     res.status(201).json(newEvent);
   } catch (error) {
-    console.log("Error in createEvent:", error.message);
+    console.error("Error in createEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
-router.put("/:eventId", protectRoute, async (req, res) => {
+router.put("/:eventId", protectRoute, sanitizeInput(['title', 'description', 'venue', 'tags']), async (req, res) => {
   try {
     const { eventId } = req.params;
     const { 
@@ -75,10 +95,9 @@ router.put("/:eventId", protectRoute, async (req, res) => {
       endDate,
       category, 
       maxAttendees,
-      isPrivate,
       venue,
       tags,
-      image 
+      image
     } = req.body;
     const userId = req.user._id;
 
@@ -103,6 +122,8 @@ router.put("/:eventId", protectRoute, async (req, res) => {
 
     let imageUrl = event.image; // Keep existing image by default
     if (image) {
+      const { valid, error } = validateImage(image);
+      if (!valid) return res.status(400).json({ message: error });
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
     }
@@ -114,7 +135,6 @@ router.put("/:eventId", protectRoute, async (req, res) => {
       endDate: endDate ? new Date(endDate) : null,
       category: category || 'other',
       maxAttendees: maxAttendees ? parseInt(maxAttendees) : null,
-      isPrivate: isPrivate || false,
       'location.venue': venue || "",
       tags: tags || [],
       image: imageUrl
@@ -134,7 +154,153 @@ router.put("/:eventId", protectRoute, async (req, res) => {
 
     res.status(200).json(eventData);
   } catch (error) {
-    console.log("Error in updateEvent:", error.message);
+    console.error("Error in updateEvent:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Search events
+router.get("/search", protectRoute, async (req, res) => {
+  try {
+    const { q, scope = 'nearby' } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const user = req.user;
+
+    if (!q || q.length < 2) {
+      return res.status(400).json({ message: "Search query must be at least 2 characters" });
+    }
+
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const textMatch = {
+      $or: [
+        { title: { $regex: escaped, $options: 'i' } },
+        { description: { $regex: escaped, $options: 'i' } },
+        { tags: { $regex: escaped, $options: 'i' } },
+        { 'location.venue': { $regex: escaped, $options: 'i' } }
+      ]
+    };
+
+    if (scope === 'following') {
+      const events = await Event.find({
+        ...textMatch,
+        creator: { $in: user.following }
+      })
+      .populate('creator', 'fullName username profilePic')
+      .sort({ date: 1 })
+      .skip(skip)
+      .limit(limit);
+
+      const userLocation = user.currentCity?.coordinates;
+      const results = events.map(event => {
+        let distanceInMiles = 0;
+        if (userLocation && userLocation[0] !== 0 && event.location?.coordinates) {
+          const [uLng, uLat] = userLocation;
+          const [eLng, eLat] = event.location.coordinates;
+          const R = 3959;
+          const dLat = (eLat - uLat) * Math.PI / 180;
+          const dLon = (eLng - uLng) * Math.PI / 180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(uLat * Math.PI / 180) * Math.cos(eLat * Math.PI / 180) * Math.sin(dLon/2)**2;
+          distanceInMiles = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        return { ...event.toObject(), distanceInMiles, attendeeCount: event.attendees.filter(a => a.status === 'yes').length };
+      });
+
+      return res.status(200).json(results);
+    }
+
+    // scope === 'nearby' — use geo query
+    const searchLocation = user.locationSettings.autoDetectLocation
+      ? user.currentCity.coordinates
+      : user.locationSettings.searchLocation.coordinates;
+    const radiusInMeters = (user.locationSettings.nearMeRadius || 25) * 1609.34;
+
+    if (!searchLocation || searchLocation[0] === 0) {
+      return res.status(400).json({ message: "Location not set." });
+    }
+
+    const events = await Event.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: searchLocation },
+          distanceField: "distance",
+          maxDistance: radiusInMeters,
+          spherical: true,
+          query: textMatch
+        }
+      },
+      { $sort: { date: 1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users", localField: "creator", foreignField: "_id", as: "creator",
+          pipeline: [{ $project: { fullName: 1, username: 1, profilePic: 1 } }]
+        }
+      },
+      {
+        $addFields: {
+          creator: { $arrayElemAt: ["$creator", 0] },
+          distanceInMiles: { $divide: ["$distance", 1609.34] },
+          attendeeCount: { $size: { $filter: { input: "$attendees", cond: { $eq: ["$$this.status", "yes"] } } } }
+        }
+      }
+    ]);
+
+    res.status(200).json(events);
+  } catch (error) {
+    console.error("Error in searchEvents:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Get events from users you follow
+router.get("/following", protectRoute, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const user = req.user;
+    const userLocation = user.currentCity?.coordinates;
+
+    const events = await Event.find({
+      creator: { $in: user.following }
+    })
+    .populate('creator', 'fullName username profilePic')
+    .sort({ date: 1 })
+    .skip(skip)
+    .limit(limit);
+
+    const eventsWithDetails = events.map(event => {
+      let distanceInMiles = 0;
+      if (userLocation && userLocation[0] !== 0 && event.location?.coordinates) {
+        const [userLng, userLat] = userLocation;
+        const [eventLng, eventLat] = event.location.coordinates;
+        const R = 3959;
+        const dLat = (eventLat - userLat) * Math.PI / 180;
+        const dLon = (eventLng - userLng) * Math.PI / 180;
+        const a =
+          Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(userLat * Math.PI / 180) * Math.cos(eventLat * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        distanceInMiles = R * c;
+      }
+
+      const attendeeCount = event.attendees.filter(a => a.status === 'yes').length;
+
+      return {
+        ...event.toObject(),
+        distanceInMiles,
+        attendeeCount
+      };
+    });
+
+    res.status(200).json(eventsWithDetails);
+  } catch (error) {
+    console.error("Error in getFollowingEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -168,10 +334,7 @@ router.get("/nearby", protectRoute, async (req, res) => {
         distanceField: "distance",
         maxDistance: radiusInMeters,
         spherical: true,
-        query: {
-            date: { $gte: new Date() },
-            isPrivate: false
-        }
+        query: {}
         }
     },
       { $sort: { date: 1 } }, // Sort by event date
@@ -206,7 +369,7 @@ router.get("/nearby", protectRoute, async (req, res) => {
 
     res.status(200).json(events);
   } catch (error) {
-    console.log("Error in getNearbyEvents:", error.message);
+    console.error("Error in getNearbyEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -272,7 +435,7 @@ router.get("/my-events", protectRoute, async (req, res) => {
 
     res.status(200).json(eventsWithDetails);
   } catch (error) {
-    console.log("Error in getMyEvents:", error.message);
+    console.error("Error in getMyEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -288,8 +451,7 @@ router.get("/user/:userId/rsvped", protectRoute, async (req, res) => {
     // Find all public events where the specified user has RSVP'd "yes" or "maybe"
     const events = await Event.find({
       "attendees.user": userId,
-      "attendees.status": { $in: ["yes", "maybe"] },
-      isPrivate: false // Only show public events when viewing other users
+      "attendees.status": { $in: ["yes", "maybe"] }
     })
     .populate('creator', 'fullName username profilePic')
     .sort({ date: 1 })
@@ -344,7 +506,7 @@ router.get("/user/:userId/rsvped", protectRoute, async (req, res) => {
 
     res.status(200).json(eventsWithDetails);
   } catch (error) {
-    console.log("Error in getUserEvents:", error.message);
+    console.error("Error in getUserEvents:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -371,7 +533,7 @@ router.get("/:eventId", protectRoute, async (req, res) => {
 
     res.status(200).json(eventData);
   } catch (error) {
-    console.log("Error in getEvent:", error.message);
+    console.error("Error in getEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -438,7 +600,7 @@ router.post("/:eventId/rsvp", protectRoute, async (req, res) => {
       attendees: event.attendees
     });
   } catch (error) {
-    console.log("Error in rsvpEvent:", error.message);
+    console.error("Error in rsvpEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -473,7 +635,7 @@ router.post("/:eventId/invite", protectRoute, async (req, res) => {
 
     res.status(200).json({ message: "Invitation sent successfully" });
   } catch (error) {
-    console.log("Error in inviteToEvent:", error.message);
+    console.error("Error in inviteToEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -496,7 +658,7 @@ router.delete("/:eventId", protectRoute, async (req, res) => {
     await Event.findByIdAndDelete(eventId);
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
-    console.log("Error in deleteEvent:", error.message);
+    console.error("Error in deleteEvent:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });

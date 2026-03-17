@@ -1,16 +1,33 @@
 import express from 'express';
 import { protectRoute } from '../middleware/protectRoute.js';
+import { sanitizeInput } from '../middleware/sanitize.js';
 import Post from '../models/post.model.js';
+import Comment from '../models/comment.model.js';
 import User from '../models/user.model.js';
 import { Notification } from '../models/follow.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import { validateImage } from '../lib/utils.js';
 
 const router = express.Router();
 
+// Attach commentCount to an array of posts
+const attachCommentCounts = async (posts) => {
+  const postIds = posts.map(p => p._id || p);
+  const counts = await Comment.aggregate([
+    { $match: { parentType: 'post', parentId: { $in: postIds } } },
+    { $group: { _id: '$parentId', count: { $sum: 1 } } }
+  ]);
+  const countMap = Object.fromEntries(counts.map(c => [c._id.toString(), c.count]));
+  return posts.map(p => {
+    const obj = p.toObject ? p.toObject() : p;
+    return { ...obj, commentCount: countMap[obj._id.toString()] || 0 };
+  });
+};
+
 // Create a new post
-router.post("/", protectRoute, async (req, res) => {
+router.post("/", protectRoute, sanitizeInput(['content']), async (req, res) => {
   try {
-    const { content, image, type = 'general', eventId } = req.body;
+    const { content, image, type = 'general', eventId, placeName, location: bodyLocation } = req.body;
     const userId = req.user._id;
 
     if (!content && !image) {
@@ -23,14 +40,36 @@ router.post("/", protectRoute, async (req, res) => {
 
     let imageUrl;
     if (image) {
+      const { valid, error } = validateImage(image);
+      if (!valid) return res.status(400).json({ message: error });
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
+    }
+
+    // Use provided location or fall back to user's city
+    let postLocation = req.user.currentCity;
+    if (bodyLocation?.city && bodyLocation?.coordinates?.length === 2) {
+      // Validate within 100mi of user's city
+      if (req.user.currentCity?.coordinates && req.user.currentCity.coordinates[0] !== 0) {
+        const [lng1, lat1] = req.user.currentCity.coordinates;
+        const [lng2, lat2] = bodyLocation.coordinates;
+        const R = 3959;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        if (dist > 100) {
+          return res.status(400).json({ message: "Location must be within 100 miles of your city" });
+        }
+      }
+      postLocation = bodyLocation;
     }
 
     const newPost = new Post({
       content,
       author: userId,
-      location: req.user.currentCity,
+      location: postLocation,
+      placeName: placeName?.trim() || undefined,
       image: imageUrl,
       type,
       event: eventId || null
@@ -41,7 +80,88 @@ router.post("/", protectRoute, async (req, res) => {
 
     res.status(201).json(newPost);
   } catch (error) {
-    console.log("Error in createPost:", error.message);
+    console.error("Error in createPost:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Search posts
+router.get("/search", protectRoute, async (req, res) => {
+  try {
+    const { q, scope = 'nearby' } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const user = req.user;
+
+    if (!q || q.length < 2) {
+      return res.status(400).json({ message: "Search query must be at least 2 characters" });
+    }
+
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const textMatch = { content: { $regex: escaped, $options: 'i' } };
+
+    if (scope === 'following') {
+      const posts = await Post.find({
+        ...textMatch,
+        author: { $in: user.following }
+      })
+      .populate('author', 'fullName username profilePic')
+      .populate('event', 'title')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+      return res.status(200).json(await attachCommentCounts(posts));
+    }
+
+    // scope === 'nearby'
+    const searchLocation = user.locationSettings.autoDetectLocation
+      ? user.currentCity.coordinates
+      : user.locationSettings.searchLocation.coordinates;
+    const radiusInMeters = (user.locationSettings.nearMeRadius || 25) * 1609.34;
+
+    if (!searchLocation || searchLocation[0] === 0) {
+      return res.status(400).json({ message: "Location not set." });
+    }
+
+    const posts = await Post.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: searchLocation },
+          distanceField: "distance",
+          maxDistance: radiusInMeters,
+          spherical: true,
+          query: textMatch
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "users", localField: "author", foreignField: "_id", as: "author",
+          pipeline: [{ $project: { fullName: 1, username: 1, profilePic: 1 } }]
+        }
+      },
+      {
+        $lookup: {
+          from: "events", localField: "event", foreignField: "_id", as: "event",
+          pipeline: [{ $project: { title: 1 } }]
+        }
+      },
+      {
+        $addFields: {
+          author: { $arrayElemAt: ["$author", 0] },
+          event: { $arrayElemAt: ["$event", 0] },
+          distanceInMiles: { $divide: ["$distance", 1609.34] }
+        }
+      }
+    ]);
+
+    res.status(200).json(await attachCommentCounts(posts));
+  } catch (error) {
+    console.error("Error in searchPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -53,8 +173,8 @@ router.get("/following", protectRoute, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find({ 
-      author: { $in: req.user.following } 
+    const posts = await Post.find({
+      author: { $in: req.user.following }
     })
     .populate('author', 'fullName username profilePic')
     .populate('event', 'title')
@@ -62,9 +182,9 @@ router.get("/following", protectRoute, async (req, res) => {
     .limit(limit)
     .skip(skip);
 
-    res.status(200).json(posts);
+    res.status(200).json(await attachCommentCounts(posts));
   } catch (error) {
-    console.log("Error in getFollowingPosts:", error.message);
+    console.error("Error in getFollowingPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -134,9 +254,9 @@ router.get("/nearby", protectRoute, async (req, res) => {
       }
     ]);
 
-    res.status(200).json(posts);
+    res.status(200).json(await attachCommentCounts(posts));
   } catch (error) {
-    console.log("Error in getNearbyPosts:", error.message);
+    console.error("Error in getNearbyPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -162,39 +282,39 @@ router.get("/my-posts", protectRoute, async (req, res) => {
     const user = req.user;
     const userLocation = user.currentCity?.coordinates;
 
+    // Get comment counts
+    const postsWithComments = await attachCommentCounts(posts);
+
     // Add distance and interaction data for each post
-    const postsWithDetails = posts.map(post => {
+    const postsWithDetails = postsWithComments.map(post => {
       let distanceInMiles = 0;
-      
-      // Calculate distance if both user and post have coordinates
+
       if (userLocation && userLocation[0] !== 0 && post.location?.coordinates) {
         const [userLng, userLat] = userLocation;
         const [postLng, postLat] = post.location.coordinates;
-        
-        // Haversine formula
-        const R = 3959; // Earth's radius in miles
+
+        const R = 3959;
         const dLat = (postLat - userLat) * Math.PI / 180;
         const dLon = (postLng - userLng) * Math.PI / 180;
-        const a = 
+        const a =
           Math.sin(dLat/2) * Math.sin(dLat/2) +
-          Math.cos(userLat * Math.PI / 180) * Math.cos(postLat * Math.PI / 180) * 
+          Math.cos(userLat * Math.PI / 180) * Math.cos(postLat * Math.PI / 180) *
           Math.sin(dLon/2) * Math.sin(dLon/2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         distanceInMiles = R * c;
       }
 
       return {
-        ...post.toObject(),
+        ...post,
         distanceInMiles,
         likeCount: post.likes?.length || 0,
-        commentCount: post.comments?.length || 0,
-        isLiked: post.likes?.includes(userId) || false
+        isLiked: post.likes?.some(id => id.toString() === userId.toString()) || false
       };
     });
 
     res.status(200).json(postsWithDetails);
   } catch (error) {
-    console.log("Error in getMyPosts:", error.message);
+    console.error("Error in getMyPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -214,9 +334,9 @@ router.get("/user/:userId", protectRoute, async (req, res) => {
       .limit(limit)
       .skip(skip);
 
-    res.status(200).json(posts);
+    res.status(200).json(await attachCommentCounts(posts));
   } catch (error) {
-    console.log("Error in getUserPosts:", error.message);
+    console.error("Error in getUserPosts:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -262,7 +382,7 @@ router.post("/:postId/like", protectRoute, async (req, res) => {
       likes: post.likes // Send the full likes array
     });
   } catch (error) {
-    console.log("Error in likePost:", error.message);
+    console.error("Error in likePost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -285,7 +405,7 @@ router.delete("/:postId", protectRoute, async (req, res) => {
     await Post.findByIdAndDelete(postId);
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
-    console.log("Error in deletePost:", error.message);
+    console.error("Error in deletePost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -304,9 +424,10 @@ router.get("/:postId", protectRoute, async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    res.status(200).json(post);
+    const [postWithCount] = await attachCommentCounts([post]);
+    res.status(200).json(postWithCount);
   } catch (error) {
-    console.log("Error in getPost:", error.message);
+    console.error("Error in getPost:", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 });

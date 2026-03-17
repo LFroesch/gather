@@ -1,3 +1,75 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+[data-theme="lemonade"] {
+  --rounded-btn: 1.9rem;
+}
+
+@layer components {
+  .btn-ghost {
+    @apply border-2 border-base-300;
+  }
+
+  .card {
+    @apply border-2 border-base-300;
+  }
+
+  .dropdown-content {
+    @apply border-2 border-base-300 shadow-lg translate-y-1;
+  }
+}
+
+/* Card hover lift */
+.card-lift {
+  @apply transition-all duration-200 ease-out;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  @apply shadow-lg;
+}
+
+/* Page entrance */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.25s ease-out;
+}
+
+/* Active nav underline */
+.nav-active {
+  @apply relative;
+}
+.nav-active::after {
+  content: '';
+  @apply absolute bottom-0 left-3 right-3 h-0.5 bg-primary rounded-full;
+}
+
+/* Background network drift */
+@keyframes network-drift {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(8px, -5px); }
+  50%      { transform: translate(-5px, 8px); }
+  75%      { transform: translate(6px, 4px); }
+}
+.animate-network-drift {
+  animation: network-drift 30s ease-in-out infinite;
+}
+
+/* Hub node pulse */
+@keyframes hub-pulse {
+  0%, 100% { opacity: 0.1; }
+  50%      { opacity: 0.25; }
+}
+.animate-hub-pulse {
+  animation: hub-pulse 8s ease-in-out infinite;
+}
+
+/* Input focus glow */
+.input:focus,
+.select:focus,
+.textarea:focus {
+  @apply ring-2 ring-primary/25 border-primary;
+}
