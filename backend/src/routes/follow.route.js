@@ -1,12 +1,12 @@
 import express from 'express';
-import { protectRoute } from '../middleware/protectRoute.js';
+import { protectRoute, demoGuard } from '../middleware/protectRoute.js';
 import { Follow, Notification } from '../models/follow.model.js';
 import User from '../models/user.model.js';
 
 const router = express.Router();
 
 // Follow a user
-router.post("/follow/:userId", protectRoute, async (req, res) => {
+router.post("/follow/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: targetUserId } = req.params;
     const currentUserId = req.user._id;
@@ -63,7 +63,7 @@ router.post("/follow/:userId", protectRoute, async (req, res) => {
 });
 
 // Unfollow a user
-router.post("/unfollow/:userId", protectRoute, async (req, res) => {
+router.post("/unfollow/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: targetUserId } = req.params;
     const currentUserId = req.user._id;

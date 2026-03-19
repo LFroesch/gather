@@ -10,7 +10,14 @@ const LoginPage = () => {
     email: "",
     password: "",
   });
-  const { login, isLoggingIn } = useAuthStore();
+  const { login, demoLogin, isLoggingIn } = useAuthStore();
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  const handleDemoLogin = async () => {
+    setIsDemoLoading(true);
+    await demoLogin();
+    setIsDemoLoading(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,6 +103,24 @@ const LoginPage = () => {
               )}
             </button>
           </form>
+
+          <div className="divider text-base-content/40 text-sm">or</div>
+
+          <button
+            type="button"
+            className="btn btn-outline btn-secondary w-full"
+            onClick={handleDemoLogin}
+            disabled={isDemoLoading || isLoggingIn}
+          >
+            {isDemoLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading demo...
+              </>
+            ) : (
+              "Try Demo"
+            )}
+          </button>
 
           <div className="text-center space-y-2">
             <p>

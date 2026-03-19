@@ -39,6 +39,10 @@ const pollSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
+  },
+  isDemo: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

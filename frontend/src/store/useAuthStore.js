@@ -60,6 +60,20 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  demoLogin: async () => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/demo-login");
+      set({ authUser: res.data });
+      toast.success("Welcome to the demo!");
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Demo login failed");
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
   logout: async () => {
     try {
       await axiosInstance.post("/auth/logout");

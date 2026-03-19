@@ -97,6 +97,8 @@ export const getUsers = async (req, res) => {
     const skip = (page - 1) * limit;
 
     let query = {};
+    // Demo sessions only see demo users
+    if (req.user.isDemo) query.isDemo = true;
     if (role && role !== 'all') {
       query.role = role;
     }

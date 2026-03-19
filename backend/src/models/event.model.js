@@ -77,7 +77,11 @@ const eventSchema = new mongoose.Schema({
     tags: [{
         type: String,
         maxlength: 20
-    }]
+    }],
+    isDemo: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true
 });

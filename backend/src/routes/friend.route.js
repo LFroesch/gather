@@ -1,5 +1,5 @@
 import express from 'express';
-import { protectRoute } from '../middleware/protectRoute.js';
+import { protectRoute, demoGuard } from '../middleware/protectRoute.js';
 import Friendship from '../models/friendship.model.js';
 import { Notification } from '../models/follow.model.js';
 import User from '../models/user.model.js';
@@ -7,7 +7,7 @@ import User from '../models/user.model.js';
 const router = express.Router();
 
 // Send friend request
-router.post("/request/:userId", protectRoute, async (req, res) => {
+router.post("/request/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: recipientId } = req.params;
     const requesterId = req.user._id;
@@ -51,7 +51,7 @@ router.post("/request/:userId", protectRoute, async (req, res) => {
 });
 
 // Accept friend request
-router.post("/accept/:userId", protectRoute, async (req, res) => {
+router.post("/accept/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: requesterId } = req.params;
     const recipientId = req.user._id;
@@ -87,7 +87,7 @@ router.post("/accept/:userId", protectRoute, async (req, res) => {
 });
 
 // Reject friend request
-router.post("/reject/:userId", protectRoute, async (req, res) => {
+router.post("/reject/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: requesterId } = req.params;
     const recipientId = req.user._id;
@@ -108,7 +108,7 @@ router.post("/reject/:userId", protectRoute, async (req, res) => {
 });
 
 // Cancel outgoing friend request
-router.post("/cancel/:userId", protectRoute, async (req, res) => {
+router.post("/cancel/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: recipientId } = req.params;
     const requesterId = req.user._id;
@@ -129,7 +129,7 @@ router.post("/cancel/:userId", protectRoute, async (req, res) => {
 });
 
 // Remove friend
-router.delete("/remove/:userId", protectRoute, async (req, res) => {
+router.delete("/remove/:userId", protectRoute, demoGuard, async (req, res) => {
   try {
     const { userId: friendId } = req.params;
     const currentUserId = req.user._id;

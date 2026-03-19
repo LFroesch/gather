@@ -2,6 +2,7 @@ import Poll from "../models/poll.model.js";
 import User from "../models/user.model.js";
 import { Notification } from "../models/follow.model.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import { demoFilter } from "../lib/utils.js";
 
 // Haversine distance in miles
 const haversineDistance = (coords1, coords2) => {
@@ -25,9 +26,11 @@ export const getPolls = async (req, res) => {
     const filter = req.query.filter || 'active';
     const category = req.query.category;
 
+    const df = demoFilter(req.user);
+
     // "mine" tab — no geo filtering
     if (filter === 'mine') {
-      const query = { creator: req.user._id };
+      const query = { creator: req.user._id, ...df };
       if (category) query.category = category;
 
       const polls = await Poll.find(query)
@@ -48,7 +51,7 @@ export const getPolls = async (req, res) => {
 
     // Fall back to non-geo query if no location set
     if (!searchLocation || searchLocation[0] === 0) {
-      const query = { status: 'approved' };
+      const query = { status: 'approved', ...df };
       if (filter === 'active') query.expiresAt = { $gt: new Date() };
       else if (filter === 'expired') query.expiresAt = { $lte: new Date() };
       if (category) query.category = category;
@@ -62,7 +65,7 @@ export const getPolls = async (req, res) => {
       return res.status(200).json(polls.map(poll => formatPoll(poll.toObject(), req.user._id)));
     }
 
-    const baseQuery = { status: 'approved' };
+    const baseQuery = { status: 'approved', ...df };
     if (filter === 'active') baseQuery.expiresAt = { $gt: new Date() };
     else if (filter === 'expired') baseQuery.expiresAt = { $lte: new Date() };
     if (category) baseQuery.category = category;
@@ -99,7 +102,7 @@ export const getPolls = async (req, res) => {
 
     // Also fetch polls WITHOUT location (legacy data)
     const noLocationQuery = {
-      ...baseQuery,
+      ...baseQuery, ...df,
       $or: [
         { "location.coordinates": { $exists: false } },
         { "location.coordinates": [0, 0] },
@@ -175,7 +178,8 @@ export const createPoll = async (req, res) => {
       expiresAt: expDate,
       location,
       category: category || 'general',
-      placeName: placeName?.trim() || undefined
+      placeName: placeName?.trim() || undefined,
+      ...(req.user.isDemo && { isDemo: true })
     });
 
     await poll.save();

@@ -146,6 +146,7 @@ export const sendMessage = async (req, res) => {
       receiverId,
       text,
       image: imageUrl,
+      ...(req.user.isDemo && { isDemo: true })
     });
 
     await newMessage.save();

@@ -1,6 +1,7 @@
 import express from 'express';
 import { protectRoute } from '../middleware/protectRoute.js';
 import { sanitizeInput } from '../middleware/sanitize.js';
+import { demoFilter } from '../lib/utils.js';
 import Comment from '../models/comment.model.js';
 import Post from '../models/post.model.js';
 import Event from '../models/event.model.js';
@@ -115,7 +116,8 @@ router.post("/:parentType/:parentId", protectRoute, sanitizeInput(['text']), asy
       author: userId,
       parentType,
       parentId,
-      ...(replyTo && { replyTo })
+      ...(replyTo && { replyTo }),
+      ...(req.user.isDemo && { isDemo: true })
     });
 
     await comment.save();
@@ -166,7 +168,7 @@ router.get("/:parentType/:parentId", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Invalid parent type" });
     }
 
-    const comments = await Comment.find({ parentType, parentId })
+    const comments = await Comment.find({ parentType, parentId, ...demoFilter(req.user) })
       .populate('author', 'fullName username profilePic')
       .sort({ createdAt: -1 })
       .skip(skip)

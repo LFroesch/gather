@@ -1,5 +1,9 @@
 import jwt from "jsonwebtoken";
 
+// Returns a query filter that hides demo-session content from real users.
+// Demo users see everything; real users never see isDemo content.
+export const demoFilter = (user) => user?.isDemo ? {} : { isDemo: { $ne: true } };
+
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 

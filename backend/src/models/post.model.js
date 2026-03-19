@@ -50,6 +50,10 @@ const postSchema = new mongoose.Schema({
         type: String,
         enum: ['general', 'event-related', 'announcement'],
         default: 'general'
+    },
+    isDemo: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

@@ -101,7 +101,8 @@ export const submitSong = async (req, res) => {
       album: album?.trim() || "",
       externalId: externalId || {},
       previewUrl: previewUrl || "",
-      submittedBy: req.user._id
+      submittedBy: req.user._id,
+      ...(req.user.isDemo && { isDemo: true })
     });
 
     await newSong.save();

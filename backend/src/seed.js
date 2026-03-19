@@ -8,6 +8,8 @@ import Comment from './models/comment.model.js';
 import Song from './models/song.model.js';
 import Poll from './models/poll.model.js';
 import { Follow } from './models/follow.model.js';
+import Friendship from './models/friendship.model.js';
+import Message from './models/message.model.js';
 
 dotenv.config();
 
@@ -23,8 +25,10 @@ const users = [
     username: 'alexrivera',
     email: 'alex@demo.com',
     password: await bcrypt.hash('password123', SALT),
+    profilePic: 'https://i.pravatar.cc/300?u=alexrivera',
     bio: 'Music lover & event organizer',
     role: 'admin',
+    isDemo: true,
     locationSettings: { searchLocation: SF, nearMeRadius: 25 },
     currentCity: SF
   },
@@ -33,7 +37,9 @@ const users = [
     username: 'jordanchen',
     email: 'jordan@demo.com',
     password: await bcrypt.hash('password123', SALT),
+    profilePic: 'https://i.pravatar.cc/300?u=jordanchen',
     bio: 'Live music enthusiast. Always looking for the next show.',
+    isDemo: true,
     locationSettings: { searchLocation: SF, nearMeRadius: 30 },
     currentCity: SF
   },
@@ -42,7 +48,9 @@ const users = [
     username: 'sampatel',
     email: 'sam@demo.com',
     password: await bcrypt.hash('password123', SALT),
+    profilePic: 'https://i.pravatar.cc/300?u=sampatel',
     bio: 'Developer by day, DJ by night',
+    isDemo: true,
     locationSettings: { searchLocation: SR, nearMeRadius: 25 },
     currentCity: SR
   },
@@ -51,7 +59,9 @@ const users = [
     username: 'mayaj',
     email: 'maya@demo.com',
     password: await bcrypt.hash('password123', SALT),
+    profilePic: 'https://i.pravatar.cc/300?u=mayaj',
     bio: 'Photographer & creative director',
+    isDemo: true,
     locationSettings: { searchLocation: SR, nearMeRadius: 20 },
     currentCity: SR
   }
@@ -93,8 +103,10 @@ async function seed() {
     await Follow.deleteMany({ $or: [{ follower: { $in: seedUserIds } }, { following: { $in: seedUserIds } }] });
     await Song.deleteMany({ submittedBy: { $in: seedUserIds } });
     await Poll.deleteMany({ creator: { $in: seedUserIds } });
-    // Remove seed users from other users' followers/following arrays
-    await User.updateMany({}, { $pull: { followers: { $in: seedUserIds }, following: { $in: seedUserIds } } });
+    await Friendship.deleteMany({ $or: [{ requester: { $in: seedUserIds } }, { recipient: { $in: seedUserIds } }] });
+    await Message.deleteMany({ $or: [{ senderId: { $in: seedUserIds } }, { receiverId: { $in: seedUserIds } }] });
+    // Remove seed users from other users' followers/following/friends arrays
+    await User.updateMany({}, { $pull: { followers: { $in: seedUserIds }, following: { $in: seedUserIds }, friends: { $in: seedUserIds } } });
     await User.deleteMany({ _id: { $in: seedUserIds } });
     console.log('Cleaned up existing seed data');
   }
@@ -114,7 +126,34 @@ async function seed() {
   ];
   await Follow.insertMany(follows);
 
-  // TODO: Friendships & Messages
+  // Friendships (alex <-> jordan accepted, alex <-> maya accepted, sam -> alex pending)
+  const friendships = [
+    { requester: alex._id, recipient: jordan._id, status: 'accepted' },
+    { requester: maya._id, recipient: alex._id, status: 'accepted' },
+    { requester: sam._id, recipient: alex._id, status: 'pending' },
+  ];
+  await Friendship.insertMany(friendships);
+
+  // Update friends arrays for accepted friendships
+  await User.findByIdAndUpdate(alex._id, { $push: { friends: { $each: [jordan._id, maya._id] } } });
+  await User.findByIdAndUpdate(jordan._id, { $push: { friends: alex._id } });
+  await User.findByIdAndUpdate(maya._id, { $push: { friends: alex._id } });
+  console.log(`Created ${friendships.length} friendships (2 accepted, 1 pending)`);
+
+  // Messages between alex & jordan
+  const now = Date.now();
+  const messages = [
+    { senderId: jordan._id, receiverId: alex._id, text: 'Hey, you still setting up for Friday?', createdAt: new Date(now - 3600000 * 5) },
+    { senderId: alex._id, receiverId: jordan._id, text: 'Yeah! Got the turntable situation sorted. Bringing two.', createdAt: new Date(now - 3600000 * 4.5) },
+    { senderId: jordan._id, receiverId: alex._id, text: 'Nice. I have a few records I want to spin if there\'s time', createdAt: new Date(now - 3600000 * 4) },
+    { senderId: alex._id, receiverId: jordan._id, text: 'For sure, open decks after 9. Bring whatever you want', createdAt: new Date(now - 3600000 * 3) },
+    { senderId: jordan._id, receiverId: alex._id, text: 'Perfect. See you there 🎶', createdAt: new Date(now - 3600000 * 2) },
+    { senderId: maya._id, receiverId: alex._id, text: 'Are you going to the photography walk next week?', createdAt: new Date(now - 3600000 * 8) },
+    { senderId: alex._id, receiverId: maya._id, text: 'Definitely, I signed up yesterday', createdAt: new Date(now - 3600000 * 7) },
+    { senderId: maya._id, receiverId: alex._id, text: 'Awesome! I\'m leading it so let me know if you have any questions', createdAt: new Date(now - 3600000 * 6) },
+  ];
+  await Message.insertMany(messages);
+  console.log(`Created ${messages.length} messages`);
 
   // Update follower/following arrays on User docs
   for (const f of follows) {
@@ -134,7 +173,7 @@ async function seed() {
       endDate: futureDate(3, 23),
       category: 'entertainment',
       maxAttendees: 50,
-      image: 'https://plus.unsplash.com/premium_photo-1670992114662-1f102c1cec79?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // TODO: add photo
+      image: 'https://plus.unsplash.com/premium_photo-1670992114662-1f102c1cec79?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       tags: ['music', 'vinyl', 'rooftop'],
       attendees: [
         { user: jordan._id, status: 'yes' },
@@ -150,7 +189,7 @@ async function seed() {
       date: futureDate(7, 18),
       endDate: futureDate(7, 21),
       category: 'professional',
-      image: '', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=1170&auto=format&fit=crop',
       tags: ['tech', 'AI', 'networking'],
       attendees: [
         { user: alex._id, status: 'yes' },
@@ -164,7 +203,7 @@ async function seed() {
       location: { ...SF, coordinates: [-122.4862, 37.7694], venue: 'Golden Gate Park - Panhandle Entrance' },
       date: futureDate(5, 8),
       category: 'sports',
-      image: '', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?q=80&w=1170&auto=format&fit=crop',
       tags: ['running', 'outdoors', 'fitness'],
       attendees: [
         { user: alex._id, status: 'yes' },
@@ -180,7 +219,7 @@ async function seed() {
       endDate: futureDate(10, 19),
       category: 'educational',
       maxAttendees: 15,
-      image: '', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?q=80&w=1074&auto=format&fit=crop',
       tags: ['photography', 'creative', 'workshop'],
       attendees: [
         { user: alex._id, status: 'yes' },
@@ -197,7 +236,7 @@ async function seed() {
       endDate: futureDate(6, 23),
       category: 'concert',
       maxAttendees: 200,
-      image: 'https://images.unsplash.com/photo-1576912656434-b1a36d08fb3e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1576912656434-b1a36d08fb3e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       tags: ['livemusic', 'indie', 'bands'],
       attendees: [
         { user: alex._id, status: 'yes' },
@@ -214,7 +253,7 @@ async function seed() {
       endDate: futureDate(12, 18),
       category: 'food',
       maxAttendees: 300,
-      image: 'https://images.unsplash.com/photo-1686560740263-d6a19edbcd1f?q=80&w=1331&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1686560740263-d6a19edbcd1f?q=80&w=1331&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       tags: ['food', 'tacos', 'festival'],
       attendees: [
         { user: jordan._id, status: 'yes' },
@@ -231,7 +270,7 @@ async function seed() {
       endDate: futureDate(9, 2),
       category: 'nightlife',
       maxAttendees: 150,
-      image: '', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1074&auto=format&fit=crop',
       tags: ['party', 'dj', 'nightlife'],
       attendees: [
         { user: alex._id, status: 'yes' },
@@ -246,7 +285,7 @@ async function seed() {
       date: futureDate(14, 9),
       endDate: futureDate(14, 14),
       category: 'community',
-      image: '', // TODO: add photo
+      image: 'https://images.unsplash.com/photo-1617953141700-ace03c29d1dd?q=80&w=1170&auto=format&fit=crop',
       tags: ['volunteer', 'beach', 'community'],
       attendees: [
         { user: alex._id, status: 'yes' },

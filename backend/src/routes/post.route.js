@@ -6,7 +6,7 @@ import Comment from '../models/comment.model.js';
 import User from '../models/user.model.js';
 import { Notification } from '../models/follow.model.js';
 import cloudinary from '../lib/cloudinary.js';
-import { validateImage } from '../lib/utils.js';
+import { validateImage, demoFilter } from '../lib/utils.js';
 
 const router = express.Router();
 
@@ -72,7 +72,8 @@ router.post("/", protectRoute, sanitizeInput(['content']), async (req, res) => {
       placeName: placeName?.trim() || undefined,
       image: imageUrl,
       type,
-      event: eventId || null
+      event: eventId || null,
+      ...(req.user.isDemo && { isDemo: true })
     });
 
     await newPost.save();
@@ -104,6 +105,7 @@ router.get("/search", protectRoute, async (req, res) => {
     if (scope === 'following') {
       const posts = await Post.find({
         ...textMatch,
+        ...demoFilter(user),
         author: { $in: user.following }
       })
       .populate('author', 'fullName username profilePic')
@@ -132,7 +134,7 @@ router.get("/search", protectRoute, async (req, res) => {
           distanceField: "distance",
           maxDistance: radiusInMeters,
           spherical: true,
-          query: textMatch
+          query: { ...textMatch, ...demoFilter(user) }
         }
       },
       { $sort: { createdAt: -1 } },
@@ -174,7 +176,8 @@ router.get("/following", protectRoute, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const posts = await Post.find({
-      author: { $in: req.user.following }
+      author: { $in: req.user.following },
+      ...demoFilter(req.user)
     })
     .populate('author', 'fullName username profilePic')
     .populate('event', 'title')
@@ -217,7 +220,8 @@ router.get("/nearby", protectRoute, async (req, res) => {
           },
           distanceField: "distance",
           maxDistance: radiusInMeters,
-          spherical: true
+          spherical: true,
+          query: { ...demoFilter(user) }
         }
       },
       { $sort: { createdAt: -1 } },
@@ -327,7 +331,7 @@ router.get("/user/:userId", protectRoute, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const posts = await Post.find({ author: userId })
+    const posts = await Post.find({ author: userId, ...demoFilter(req.user) })
       .populate('author', 'fullName username profilePic')
       .populate('event', 'title')
       .sort({ createdAt: -1 })

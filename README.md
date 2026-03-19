@@ -2,6 +2,84 @@
 
 Gather is a location-based social app I built to help people find events, share posts, and connect with others in their area. Think of it like a neighborhood bulletin board with real-time chat, polls, and a song voting feature thrown in.
 
+<!-- TODO: hero screenshot here — home feed with a few posts/events visible -->
+
+## Screenshots
+
+<details>
+<summary>Home Feed</summary>
+
+<!-- screenshot: logged in as alex, nearby tab, mix of posts and events visible -->
+
+</details>
+
+<details>
+<summary>Events</summary>
+
+<!-- screenshot: Rooftop Vinyl Night event page — RSVPs, comments, invite button -->
+<!-- screenshot: create event form with location picker and category dropdown -->
+
+</details>
+
+<details>
+<summary>Real-time Chat</summary>
+
+<!-- gif: conversation with jordan, sending a message, online indicator visible -->
+
+</details>
+
+<details>
+<summary>Search</summary>
+
+<!-- gif: searching "music", results loading across events/posts/users tabs -->
+
+</details>
+
+<details>
+<summary>Polls & Song Voting</summary>
+
+<!-- screenshot: PollsPage with active polls, vote counts -->
+<!-- screenshot: VotingPage leaderboard with daily chart -->
+
+</details>
+
+<details>
+<summary>Notifications</summary>
+
+<!-- screenshot: notification dropdown with friend request (accept/reject), RSVP, comment notifs -->
+
+</details>
+
+<details>
+<summary>Profiles</summary>
+
+<!-- screenshot: alex's profile with posts, events, friends list -->
+<!-- screenshot: viewing another user's profile with follow/friend buttons -->
+
+</details>
+
+<details>
+<summary>Admin Dashboard</summary>
+
+<!-- screenshot: admin stats overview, user management table -->
+<!-- screenshot: report review queue or poll approval -->
+
+</details>
+
+<details>
+<summary>Themes</summary>
+
+<!-- gif or side-by-side: same page in 2-3 different themes -->
+
+</details>
+
+<details>
+<summary>Mobile</summary>
+
+<!-- screenshot: home feed at mobile width, bottom nav visible -->
+
+</details>
+
 ## Tech Stack
 
 | Layer | Tech |
@@ -13,7 +91,7 @@ Gather is a location-based social app I built to help people find events, share 
 | Auth | JWT stored in httpOnly cookies, role-based access |
 | File uploads | Cloudinary |
 | Geocoding | Nominatim (free, no API key needed) |
-| Email | Resend (password resets) |
+| Email | Gmail SMTP via Nodemailer (password resets) |
 
 ## What it does
 
@@ -31,11 +109,15 @@ Gather is a location-based social app I built to help people find events, share 
 
 **Search** — Search events, posts, and users with geo filtering. Scope results to "nearby" or "following." All three queries fire in parallel.
 
-**Admin dashboard** — Platform stats, user management (roles, bans), report review queue, poll approval, song moderation.
+**Notifications** — Real-time via Socket.IO. Covers RSVPs, comments, replies, friend requests, follows, event invites, and poll approvals. Friend requests have inline accept/reject buttons right in the notification.
 
-**Notifications** — Real-time notifications for RSVPs, comments, replies, friend requests, follows, event invites, and poll approvals. Inline accept/reject for friend requests. Clear all button.
+**Admin dashboard** — Platform-wide stats, user management (roles, bans), report review queue, poll approval, and song moderation. Admin routes are protected on both backend (middleware) and frontend (route guard + redirect).
 
-**Other stuff** — 32 theme options, profanity filter, HTML sanitization, content reporting, password reset via email, configurable search radius, mobile-responsive with bottom nav.
+**Themes** — 32 theme options via DaisyUI. Persisted in Zustand store. Everything uses semantic theme classes so every theme just works.
+
+**Moderation & safety** — Profanity filter (`bad-words`), HTML sanitization (`sanitize-html`), content reporting with admin review queue. Rate limiting on auth routes. Helmet for security headers.
+
+**Mobile responsive** — Bottom nav on small screens, responsive layouts throughout. Usable on a phone without squinting.
 
 ## Project structure
 
@@ -104,11 +186,19 @@ You'll need Node 18+, a MongoDB instance ([Atlas free tier](https://www.mongodb.
    CLOUDINARY_API_SECRET=your_secret
    NODE_ENV=development
    CLIENT_URL=http://localhost:5173
-   RESEND_API_KEY=your_resend_key          # optional, for password reset emails
-   RESEND_FROM_EMAIL=Gather <noreply@yourdomain.com>
+   SMTP_USER=your_gmail@gmail.com           # for password reset emails
+   SMTP_PASS=your_app_password              # Gmail App Password (not your login password)
    ```
 
-3. Run it:
+3. Seed demo data (optional):
+
+   ```bash
+   cd backend && node src/seed.js
+   ```
+
+   This creates 4 users, events, posts, polls, songs, friendships, and messages. Login with `alex@demo.com` / `password123` (admin) or any of the other demo accounts.
+
+4. Run it:
 
    ```bash
    npm run dev   # starts backend (5001) + frontend (5173)

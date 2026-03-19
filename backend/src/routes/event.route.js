@@ -4,7 +4,7 @@ import { sanitizeInput } from '../middleware/sanitize.js';
 import Event from '../models/event.model.js';
 import { Notification } from '../models/follow.model.js';
 import cloudinary from '../lib/cloudinary.js';
-import { validateImage } from '../lib/utils.js';
+import { validateImage, demoFilter } from '../lib/utils.js';
 
 const router = express.Router();
 
@@ -72,7 +72,8 @@ router.post("/", protectRoute, sanitizeInput(['title', 'description', 'venue', '
       maxAttendees,
       image: imageUrl,
       tags,
-      attendees: [{ user: userId, status: 'yes' }] // Creator auto-attends
+      attendees: [{ user: userId, status: 'yes' }],
+      ...(req.user.isDemo && { isDemo: true })
     });
 
     await newEvent.save();
@@ -185,6 +186,7 @@ router.get("/search", protectRoute, async (req, res) => {
     if (scope === 'following') {
       const events = await Event.find({
         ...textMatch,
+        ...demoFilter(user),
         creator: { $in: user.following }
       })
       .populate('creator', 'fullName username profilePic')
@@ -227,7 +229,7 @@ router.get("/search", protectRoute, async (req, res) => {
           distanceField: "distance",
           maxDistance: radiusInMeters,
           spherical: true,
-          query: textMatch
+          query: { ...textMatch, ...demoFilter(user) }
         }
       },
       { $sort: { date: 1 } },
@@ -266,7 +268,8 @@ router.get("/following", protectRoute, async (req, res) => {
     const userLocation = user.currentCity?.coordinates;
 
     const events = await Event.find({
-      creator: { $in: user.following }
+      creator: { $in: user.following },
+      ...demoFilter(user)
     })
     .populate('creator', 'fullName username profilePic')
     .sort({ date: 1 })
@@ -334,7 +337,7 @@ router.get("/nearby", protectRoute, async (req, res) => {
         distanceField: "distance",
         maxDistance: radiusInMeters,
         spherical: true,
-        query: {}
+        query: { ...demoFilter(user) }
         }
     },
       { $sort: { date: 1 } }, // Sort by event date
