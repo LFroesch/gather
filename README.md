@@ -198,6 +198,14 @@ You'll need Node 18+, a MongoDB instance ([Atlas free tier](https://www.mongodb.
 
    This creates 4 users, events, posts, polls, songs, friendships, and messages. Login with `alex@demo.com` / `password123` (admin) or any of the other demo accounts.
 
+4. Check seed image URLs (optional):
+
+   ```bash
+   cd backend && ./src/check-seed-images.sh
+   ```
+
+   Unsplash URLs can expire — this checks all image URLs in the seed data and flags any that return non-200.
+
 4. Run it:
 
    ```bash

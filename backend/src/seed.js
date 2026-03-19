@@ -285,7 +285,7 @@ async function seed() {
       date: futureDate(14, 9),
       endDate: futureDate(14, 14),
       category: 'community',
-      image: 'https://images.unsplash.com/photo-1617953141700-ace03c29d1dd?q=80&w=1170&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1170&auto=format&fit=crop',
       tags: ['volunteer', 'beach', 'community'],
       attendees: [
         { user: alex._id, status: 'yes' },
