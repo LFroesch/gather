@@ -8,7 +8,7 @@ const Footer = () => {
 				<div className='flex items-center gap-4 text-sm text-base-content/60'>
 					<span>Built by{" "}
 						<a
-							href='https://github.com/LFroesch/gather'
+							href='https://froesch.dev'
 							target='_blank'
 							rel='noreferrer'
 							className='font-medium hover:text-primary transition-colors'
@@ -16,6 +16,15 @@ const Footer = () => {
 							Lucas Froeschner
 						</a>
 					</span>
+					<span className='text-base-content/30'>|</span>
+					<a
+						href='https://github.com/LFroesch'
+						target='_blank'
+						rel='noreferrer'
+						className='hover:text-primary transition-colors'
+					>
+						GitHub
+					</a>
 				</div>
 			</div>
 		</footer>
