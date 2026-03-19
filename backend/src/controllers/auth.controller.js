@@ -29,7 +29,7 @@ export const signup = async (req, res) => {
     }
 
     // Check for existing email
-    const existingEmail = await User.findOne({ email });
+    const existingEmail = await User.findOne({ email: email.toLowerCase() });
     if (existingEmail) return res.status(400).json({ message: "Email already exists" });
 
     // Check for existing username
@@ -41,7 +41,7 @@ export const signup = async (req, res) => {
 
     const newUser = new User({
       fullName,
-      email,
+      email: email.toLowerCase(),
       username,
       password: hashedPassword,
       bio: "",
@@ -96,7 +96,7 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -251,7 +251,7 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     // Always return success to prevent email enumeration
     if (!user) {
