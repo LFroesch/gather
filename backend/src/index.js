@@ -25,6 +25,8 @@ import path from 'path';
 const PORT = process.env.PORT;
 const __dirname = path.resolve();
 
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {
