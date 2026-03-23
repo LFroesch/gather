@@ -10,6 +10,7 @@ const PostCard = ({ post }) => {
   const { authUser } = useAuthStore();
 
   const isLiked = post.likes?.includes(authUser._id);
+  const isDemoContent = post.isDemo;
 
   const handleLike = async (e) => {
     e.preventDefault();
@@ -100,7 +101,10 @@ const PostCard = ({ post }) => {
                 <div className="text-xs text-base-content/50">@{post.author.username} · {timeAgo(post.createdAt)}</div>
               </div>
             </Link>
-            <Actions />
+            <div className="flex items-center gap-1">
+              {isDemoContent && <span className="badge badge-xs badge-ghost text-base-content/40">Sample</span>}
+              <Actions />
+            </div>
           </div>
         </div>
 
@@ -183,6 +187,7 @@ const PostCard = ({ post }) => {
             {post.distanceInMiles !== undefined && post.distanceInMiles > 0 && (
               <span className="text-xs text-base-content/50">{formatDistance(post.distanceInMiles)} away</span>
             )}
+            {isDemoContent && <span className="badge badge-xs badge-ghost text-base-content/40">Sample</span>}
           </div>
           <Actions />
         </div>
@@ -215,7 +220,10 @@ const PostCard = ({ post }) => {
             <p className="text-sm text-base-content/80">{post.content}</p>
           </Link>
 
-          <Actions />
+          <div className="flex items-center gap-1">
+            {isDemoContent && <span className="badge badge-xs badge-ghost text-base-content/40">Sample</span>}
+            <Actions />
+          </div>
         </div>
 
         {/* Location footer banner */}
@@ -299,6 +307,7 @@ const PostCard = ({ post }) => {
             {post.distanceInMiles !== undefined && post.distanceInMiles > 0 && (
               <span className="text-xs text-base-content/50">{formatDistance(post.distanceInMiles)} away</span>
             )}
+            {isDemoContent && <span className="badge badge-xs badge-ghost text-base-content/40">Sample</span>}
           </div>
 
           <Actions />

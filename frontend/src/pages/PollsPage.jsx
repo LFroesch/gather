@@ -67,6 +67,7 @@ const PollCard = ({ poll, onVote, onDelete, currentUserId }) => {
                     {poll.category}
                   </span>
                 )}
+                {poll.isDemo && <span className="badge badge-md badge-ghost text-base-content/40">Sample</span>}
                 {isPending && <span className="badge badge-warning badge-md">Pending Approval</span>}
                 {isRejected && <span className="badge badge-error badge-md">Rejected</span>}
                 {!isPending && !isRejected && (

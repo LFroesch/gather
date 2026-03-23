@@ -121,6 +121,9 @@ const LoginPage = () => {
               "Try Demo"
             )}
           </button>
+          <p className="text-xs text-base-content/50 text-center -mt-4">
+            Explore with pre-loaded sample data — no signup needed
+          </p>
 
           <div className="text-center space-y-2">
             <p>

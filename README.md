@@ -91,7 +91,7 @@ Gather is a location-based social app I built to help people find events, share 
 | Auth | JWT stored in httpOnly cookies, role-based access |
 | File uploads | Cloudinary |
 | Geocoding | Nominatim (free, no API key needed) |
-| Email | Gmail SMTP via Nodemailer (password resets) |
+| Email | Resend (password resets) |
 
 ## What it does
 
@@ -186,8 +186,8 @@ You'll need Node 18+, a MongoDB instance ([Atlas free tier](https://www.mongodb.
    CLOUDINARY_API_SECRET=your_secret
    NODE_ENV=development
    CLIENT_URL=http://localhost:5173
-   SMTP_USER=your_gmail@gmail.com           # for password reset emails
-   SMTP_PASS=your_app_password              # Gmail App Password (not your login password)
+   RESEND_API_KEY=re_xxx                     # for password reset emails (resend.com)
+   FROM_EMAIL=noreply@yourdomain.com         # verified domain in Resend
    ```
 
 3. Seed demo data (optional):

@@ -66,6 +66,7 @@ const EventCard = ({ event, showRSVPStatus = false }) => {
             <span className={`badge badge-sm font-medium ${getCategoryColor(event.category)}`}>
               {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
             </span>
+            {event.isDemo && <span className="badge badge-sm badge-ghost text-base-content/40">Sample</span>}
             {isPast && <span className="badge badge-sm badge-error">Ended</span>}
             {showRSVPStatus && <span className="badge badge-sm badge-success">Attending</span>}
           </div>
@@ -146,6 +147,7 @@ const EventCard = ({ event, showRSVPStatus = false }) => {
             <span className={`badge badge-sm font-medium ${getCategoryColor(event.category)}`}>
               {event.category.charAt(0).toUpperCase() + event.category.slice(1)}
             </span>
+            {event.isDemo && <span className="badge badge-sm badge-ghost text-base-content/40">Sample</span>}
             {isPast && <span className="badge badge-sm badge-error">Ended</span>}
             {showRSVPStatus && <span className="badge badge-sm badge-success">Attending</span>}
           </div>

@@ -143,7 +143,7 @@ export async function reseedDemoData() {
     { senderId: alex._id, receiverId: maya._id, text: 'Definitely, I signed up yesterday', createdAt: new Date(now - 3600000 * 7) },
     { senderId: maya._id, receiverId: alex._id, text: 'Awesome! I\'m leading it so let me know if you have any questions', createdAt: new Date(now - 3600000 * 6) },
   ];
-  await Message.insertMany(messages);
+  await Message.insertMany(messages.map(m => ({ ...m, isDemo: true })));
 
   // Update follower/following arrays
   for (const f of follows) {
@@ -283,7 +283,7 @@ export async function reseedDemoData() {
       ]
     }
   ];
-  const createdEvents = await Event.insertMany(events);
+  const createdEvents = await Event.insertMany(events.map(e => ({ ...e, isDemo: true })));
 
   // Posts
   const posts = [
@@ -336,7 +336,7 @@ export async function reseedDemoData() {
       likes: [alex._id, jordan._id]
     }
   ];
-  const createdPosts = await Post.insertMany(posts);
+  const createdPosts = await Post.insertMany(posts.map(p => ({ ...p, isDemo: true })));
 
   // Comments
   const comments = [
@@ -352,7 +352,7 @@ export async function reseedDemoData() {
     { text: 'This venue is going to be perfect for the event', author: jordan._id, parentType: 'event', parentId: createdEvents[0]._id, likes: [alex._id] },
     { text: 'Really looking forward to the AI talks', author: alex._id, parentType: 'event', parentId: createdEvents[1]._id, likes: [sam._id, jordan._id] },
   ];
-  await Comment.insertMany(comments);
+  await Comment.insertMany(comments.map(c => ({ ...c, isDemo: true })));
 
   // Songs
   const submitters = [alex, jordan, sam, maya, alex, jordan, sam, maya];
@@ -362,7 +362,7 @@ export async function reseedDemoData() {
     totalVotes: Math.floor(Math.random() * 20) + 1,
     dailyVotes: Math.floor(Math.random() * 8)
   }));
-  await Song.insertMany(songs);
+  await Song.insertMany(songs.map(s => ({ ...s, isDemo: true })));
 
   // Polls
   const polls = [
@@ -448,7 +448,7 @@ export async function reseedDemoData() {
       status: 'approved',
     },
   ];
-  await Poll.insertMany(polls);
+  await Poll.insertMany(polls.map(p => ({ ...p, isDemo: true })));
 
   return alex;
 }
