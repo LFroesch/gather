@@ -505,9 +505,9 @@ const AdminPage = () => {
         {/* Tabs */}
         <div className="tabs tabs-bordered mb-6">
           {tabs.map(tab => (
-            <button key={tab.id} className={`tab tab-lg ${activeTab === tab.id ? 'tab-active' : ''}`}
+            <button key={tab.id} className={`tab tab-sm sm:tab-lg text-xs sm:text-sm ${activeTab === tab.id ? 'tab-active' : ''}`}
               onClick={() => setActiveTab(tab.id)}>
-              {tab.icon && <tab.icon className="w-4 h-4 mr-1" />}
+              {tab.icon && <tab.icon className="w-4 h-4 mr-1 hidden sm:inline" />}
               {tab.label}
             </button>
           ))}

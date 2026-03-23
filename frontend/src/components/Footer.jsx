@@ -1,6 +1,6 @@
 const Footer = () => {
 	return (
-		<footer className='py-6 md:px-8 md:py-0 bg-base-300 border-t border-base-content/10'>
+		<footer className='hidden xl:block py-6 md:px-8 md:py-0 bg-base-300 border-t border-base-content/10'>
 			<div className='flex flex-col h-full items-center justify-between gap-4 md:h-16 md:flex-row container mx-auto px-4'>
 				<p className='text-sm text-base-content/60'>
 					Gather

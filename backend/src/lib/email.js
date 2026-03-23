@@ -1,18 +1,12 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = process.env.SMTP_USER;
+const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@gather.froesch.dev";
 
 export const sendPasswordResetEmail = async (to, resetUrl) => {
   try {
-    await transporter.sendMail({
+    await resend.emails.send({
       from: `Gather <${FROM_EMAIL}>`,
       to,
       subject: "Reset your Gather password",

@@ -359,13 +359,13 @@ const PollsPage = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
           {/* Filter tabs */}
           <div className="tabs tabs-boxed bg-base-100 shadow border-2 border-base-300 font-bold">
             {filters.map(f => (
               <button
                 key={f.id}
-                className={`tab ${filter === f.id ? 'tab-active' : ''}`}
+                className={`tab text-xs sm:text-sm ${filter === f.id ? 'tab-active' : ''}`}
                 onClick={() => getPolls(f.id)}
               >
                 {f.label}
@@ -396,7 +396,7 @@ const PollsPage = () => {
               onClick={() => setShowCreateModal(true)}
               className="btn btn-primary btn-sm gap-2"
             >
-              <Plus className="w-4 h-4" /> New Poll
+              <Plus className="w-4 h-4" /> <span className="hidden sm:inline">New Poll</span>
             </button>
           </div>
         </div>

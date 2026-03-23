@@ -160,10 +160,10 @@ const SettingsPage = () => {
             return (
               <button
                 key={tab.id}
-                className={`tab tab-lg gap-2 ${activeSection === tab.id ? 'tab-active' : ''}`}
+                className={`tab tab-sm sm:tab-lg text-xs sm:text-sm gap-1 sm:gap-2 ${activeSection === tab.id ? 'tab-active' : ''}`}
                 onClick={() => setActiveSection(tab.id)}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4 h-4 hidden sm:block" />
                 {tab.label}
               </button>
             );

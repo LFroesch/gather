@@ -171,10 +171,10 @@ const HomePage = () => {
                 ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
-                    className={`tab gap-2 ${eventFilter === id ? 'tab-active' : ''}`}
+                    className={`tab text-xs sm:text-sm gap-1 sm:gap-2 ${eventFilter === id ? 'tab-active' : ''}`}
                     onClick={() => setParam('events', id)}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4 hidden sm:block" />
                     {label}
                   </button>
                 ))}
@@ -250,10 +250,10 @@ const HomePage = () => {
                 ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
-                    className={`tab gap-2 ${postFilter === id ? 'tab-active' : ''}`}
+                    className={`tab text-xs sm:text-sm gap-1 sm:gap-2 ${postFilter === id ? 'tab-active' : ''}`}
                     onClick={() => setParam('posts', id)}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4 hidden sm:block" />
                     {label}
                   </button>
                 ))}

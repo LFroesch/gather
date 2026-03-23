@@ -160,11 +160,10 @@ const Navbar = () => {
                 <div className="dropdown dropdown-end">
                   <button
                     tabIndex={0}
-                    className="btn btn-primary btn-md p-2 gap-2"
+                    className="btn btn-primary btn-circle btn-md"
                     onClick={() => setShowCreateMenu(!showCreateMenu)}
                   >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Create</span>
+                    <Plus className="w-5 h-5" />
                   </button>
                   <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 mt-2">
                     <li>

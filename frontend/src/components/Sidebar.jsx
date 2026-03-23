@@ -142,7 +142,7 @@ const Sidebar = () => {
             </div>
 
             {perUserUnread[user._id] > 0 && (
-              <span className="badge badge-primary badge-sm">
+              <span className="badge badge-primary badge-sm hidden lg:inline-flex">
                 {perUserUnread[user._id]}
               </span>
             )}
