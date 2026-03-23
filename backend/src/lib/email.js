@@ -1,12 +1,21 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend;
+const getResend = () => {
+  if (!resend) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is not set — cannot send emails");
+    }
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+};
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@gather.froesch.dev";
 
 export const sendPasswordResetEmail = async (to, resetUrl) => {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: `Gather <${FROM_EMAIL}>`,
       to,
       subject: "Reset your Gather password",
