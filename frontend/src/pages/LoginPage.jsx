@@ -106,6 +106,9 @@ const LoginPage = () => {
 
           <div className="divider text-base-content/40 text-sm">or</div>
 
+          <p className="text-xl text-base-content/50 text-center -mt-4">
+            Explore with pre-loaded sample data — no signup needed
+          </p>
           <button
             type="button"
             className="btn btn-outline btn-secondary w-full"
@@ -121,9 +124,6 @@ const LoginPage = () => {
               "Try Demo"
             )}
           </button>
-          <p className="text-xs text-base-content/50 text-center -mt-4">
-            Explore with pre-loaded sample data — no signup needed
-          </p>
 
           <div className="text-center space-y-2">
             <p>
