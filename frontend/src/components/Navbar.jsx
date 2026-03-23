@@ -57,7 +57,7 @@ const Navbar = () => {
   const mobileNavItems = [
     { to: '/events', icon: Calendar, label: 'Events' },
     { to: '/posts', icon: FileText, label: 'Posts' },
-    { to: '/search', icon: Search, label: 'Search' },
+    { to: '/polls', icon: BarChart3, label: 'Polls' },
     { to: '/notifications', icon: Bell, label: 'Alerts' },
     { to: '/messages', icon: MessageSquare, label: 'Chat' },
   ];
@@ -131,6 +131,13 @@ const Navbar = () => {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
+            {/* Mobile search icon (hidden on xl+ where search bar shows) */}
+            {authUser && (
+              <Link to="/search" className="xl:hidden btn btn-ghost btn-circle btn-md" aria-label="Search">
+                <Search className="w-5 h-5" />
+              </Link>
+            )}
+
             {authUser && totalOnline > 0 && (
               <div className="hidden sm:flex items-center gap-1.5 text-xs text-base-content/60 px-2">
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>

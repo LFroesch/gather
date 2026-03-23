@@ -6,9 +6,9 @@ import { useChatStore } from '../store/useChatStore'
 const MessagingPage = () => {
     const {selectedUser} = useChatStore()
   return (
-    <div className='min-h-screen pt-20'>
+    <div className='min-h-screen pt-20 pb-20 xl:pb-0'>
         <div className='flex items-center justify-center px-4'>
-            <div className='bg-base-100 rounded-lg shadow-lg border-2 border-base-300 w-full max-w-6xl h-[calc(100vh-6rem)]'>
+            <div className='bg-base-100 rounded-lg shadow-lg border-2 border-base-300 w-full max-w-6xl h-[calc(100vh-9.5rem)] xl:h-[calc(100vh-6rem)]'>
                 <div className='flex h-full rounded-lg overflow-hidden'>
                     <Sidebar/>
                     {!selectedUser ? <NoChatSelected/> : <ChatContainer/>}

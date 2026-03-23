@@ -140,7 +140,7 @@ const SettingsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20">
+    <div className="min-h-screen pt-20 pb-20">
       <div className="container mx-auto px-4 max-w-4xl animate-fade-up">
         {/* Header */}
         <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 mb-6 text-center">

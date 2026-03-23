@@ -83,7 +83,7 @@ const CreatePostPage = () => {
 
   if (!isLocationSet()) {
     return (
-      <div className="min-h-screen pt-20">
+      <div className="min-h-screen pt-20 pb-20">
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6 text-center">
             <MapPin className="w-12 h-12 mx-auto text-warning mb-4" />
@@ -104,7 +104,7 @@ const CreatePostPage = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20">
+    <div className="min-h-screen pt-20 pb-20">
       <div className="container mx-auto px-4 max-w-2xl animate-fade-up">
         <div className="bg-base-100 rounded-xl shadow-lg border-2 border-base-300 p-6">
           <h1 className="text-2xl font-bold mb-6">Create New Post</h1>

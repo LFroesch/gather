@@ -1,17 +1,10 @@
 import { generateToken, validateImage } from "../lib/utils.js";
 import User from "../models/user.model.js";
-import Post from "../models/post.model.js";
-import Event from "../models/event.model.js";
-import Comment from "../models/comment.model.js";
-import Message from "../models/message.model.js";
-import Poll from "../models/poll.model.js";
-import Song from "../models/song.model.js";
-import Vote from "../models/vote.model.js";
-import { Notification } from "../models/follow.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import cloudinary from "../lib/cloudinary.js";
 import { sendPasswordResetEmail } from "../lib/email.js";
+import { reseedDemoData } from "../lib/seedData.js";
 
 export const signup = async (req, res) => {
   const { fullName, email, password, username } = req.body;
@@ -345,52 +338,25 @@ export const changePassword = async (req, res) => {
 // Demo login — no credentials, cleans up previous session, returns restricted session
 export const demoLogin = async (req, res) => {
   try {
-    const user = await User.findOne({ email: "alex@demo.com", isDemo: true });
-    if (!user) {
-      return res.status(404).json({ message: "Demo account not available" });
-    }
+    // Full reseed — wipes all demo data and recreates fresh
+    const alex = await reseedDemoData();
 
-    // Clean up content from previous demo sessions (isDemo: true = session content)
-    const demoUserIds = await User.find({ isDemo: true }).distinct("_id");
-    await Promise.all([
-      Post.deleteMany({ isDemo: true }),
-      Event.deleteMany({ isDemo: true }),
-      Comment.deleteMany({ isDemo: true }),
-      Message.deleteMany({ isDemo: true }),
-      Poll.deleteMany({ isDemo: true }),
-      Song.deleteMany({ isDemo: true }),
-      Vote.deleteMany({ userId: { $in: demoUserIds } }),
-      Notification.deleteMany({ sender: { $in: demoUserIds } }),
-    ]);
-
-    // Clean demo user likes from real posts
-    await Post.updateMany(
-      { likes: { $in: demoUserIds } },
-      { $pull: { likes: { $in: demoUserIds } } }
-    );
-
-    // Clean demo user RSVPs from real events
-    await Event.updateMany(
-      { "attendees.user": { $in: demoUserIds } },
-      { $pull: { attendees: { user: { $in: demoUserIds } } } }
-    );
-
-    generateToken(user._id, res);
+    generateToken(alex._id, res);
 
     res.status(200).json({
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      username: user.username,
-      profilePic: user.profilePic,
-      bio: user.bio,
-      locationSettings: user.locationSettings,
-      currentCity: user.currentCity,
-      followers: user.followers,
-      following: user.following,
-      friends: user.friends,
-      messagingPreference: user.messagingPreference,
-      createdAt: user.createdAt,
+      _id: alex._id,
+      fullName: alex.fullName,
+      email: alex.email,
+      username: alex.username,
+      profilePic: alex.profilePic,
+      bio: alex.bio,
+      locationSettings: alex.locationSettings,
+      currentCity: alex.currentCity,
+      followers: alex.followers,
+      following: alex.following,
+      friends: alex.friends,
+      messagingPreference: alex.messagingPreference,
+      createdAt: alex.createdAt,
       isDemo: true,
     });
   } catch (error) {

@@ -67,6 +67,11 @@
   animation: hub-pulse 8s ease-in-out infinite;
 }
 
+/* Safe area for mobile bottom nav (iPhone home bar) */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Input focus glow */
 .input:focus,
 .select:focus,

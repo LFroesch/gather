@@ -495,7 +495,7 @@ const AdminPage = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20 pb-10">
+    <div className="min-h-screen pt-20 pb-20">
       <div className="container mx-auto px-4 max-w-6xl animate-fade-up">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>

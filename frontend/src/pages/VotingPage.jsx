@@ -164,7 +164,7 @@ const VotingPage = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16">
+    <div className="min-h-screen pt-20 pb-20">
       <div className="container mx-auto px-4 max-w-4xl animate-fade-up">
         {/* Header */}
         <div className="text-center mb-8">
