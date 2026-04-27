@@ -4,8 +4,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Navigate, Link } from 'react-router-dom';
 import {
   Users,
-  Music,
-  TrendingUp,
   Calendar,
   Search,
   Trash2,
@@ -490,7 +488,6 @@ const AdminPage = () => {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'polls', label: 'Polls', icon: BarChart3 },
-    { id: 'songs', label: 'Songs', icon: Music },
     { id: 'reports', label: 'Reports', icon: Flag },
   ];
 
@@ -523,10 +520,7 @@ const AdminPage = () => {
                 {/* Today's Stats */}
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Today's Activity</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <StatCard title="Votes" value={dashboardStats.today.votes} icon={TrendingUp} />
-                    <StatCard title="Voters" value={dashboardStats.today.uniqueVoters} icon={Users} />
-                    <StatCard title="New Songs" value={dashboardStats.today.newSongs} icon={Music} />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <StatCard title="New Events" value={dashboardStats.today.newEvents || 0} icon={Calendar} />
                     <StatCard title="New Posts" value={dashboardStats.today.newPosts || 0} icon={FileText} />
                     <StatCard title="New Users" value={dashboardStats.today.newUsers || 0} icon={UserPlus} />
@@ -542,8 +536,6 @@ const AdminPage = () => {
                       description={`${dashboardStats.allTime.upcomingEvents || 0} upcoming`} />
                     <StatCard title="Total Posts" value={(dashboardStats.allTime.totalPosts || 0).toLocaleString()} icon={FileText} />
                     <StatCard title="Total Messages" value={(dashboardStats.allTime.totalMessages || 0).toLocaleString()} icon={MessageSquare} />
-                    <StatCard title="Total Votes" value={dashboardStats.allTime.totalVotes.toLocaleString()} icon={TrendingUp} />
-                    <StatCard title="Total Songs" value={dashboardStats.allTime.totalSongs.toLocaleString()} icon={Music} />
                     <StatCard title="Admin Users" value={dashboardStats.allTime.adminUsers} icon={Crown} />
                   </div>
                 </div>
@@ -592,45 +584,6 @@ const AdminPage = () => {
                     </div>
                   </div>
 
-                  {/* Recent Songs */}
-                  <div className="card bg-base-200 shadow-lg">
-                    <div className="card-body">
-                      <h3 className="card-title">Recent Songs</h3>
-                      <div className="space-y-3">
-                        {dashboardStats.recentSongs.map(song => (
-                          <div key={song._id} className="flex items-center gap-3 text-sm">
-                            <Music className="w-4 h-4 text-primary flex-shrink-0" />
-                            <div className="flex-grow min-w-0">
-                              <p className="font-medium truncate">{song.title}</p>
-                              <p className="text-base-content/60 truncate">{song.artist}</p>
-                            </div>
-                            <div className="text-xs text-base-content/50">{new Date(song.createdAt).toLocaleDateString()}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recent Votes */}
-                  <div className="card bg-base-200 shadow-lg">
-                    <div className="card-body">
-                      <h3 className="card-title">Recent Votes</h3>
-                      <div className="space-y-3">
-                        {dashboardStats.recentVotes.map(vote => (
-                          <div key={vote._id} className="flex items-center gap-3 text-sm">
-                            <TrendingUp className="w-4 h-4 text-success flex-shrink-0" />
-                            <div className="flex-grow min-w-0">
-                              <p className="font-medium truncate">{vote.songId?.title}</p>
-                              <p className="text-base-content/60 truncate">
-                                by <Link to={`/profile/${vote.userId?.username}`} className="hover:text-primary">{vote.userId?.username}</Link>
-                              </p>
-                            </div>
-                            <div className="text-xs text-base-content/50">{new Date(vote.createdAt).toLocaleTimeString()}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </>
             ) : (
@@ -640,7 +593,6 @@ const AdminPage = () => {
         )}
 
         {activeTab === 'users' && <UserManagementTab />}
-        {activeTab === 'songs' && <SongManagementTab />}
         {activeTab === 'polls' && <PollManagementTab />}
         {activeTab === 'reports' && <ReportsTab />}
       </div>

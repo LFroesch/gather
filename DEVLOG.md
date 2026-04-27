@@ -1,5 +1,18 @@
 ## DevLog
 
+### 2026-04-22: Hide WIP songs from admin panel + diagnose admin gate
+- AdminPage: removed Songs tab, "New Songs"/"Total Songs" stat cards, and Recent Songs/Recent Votes panels (song voting still WIP)
+- Dropped unused `Music`/`TrendingUp` imports; `SongManagementTab` component + store methods kept for easy re-enable
+- Cleared stale TODO in `Navbar.jsx` — admin gate (`isAdmin(authUser)`) is working; main account just needs `role: 'admin'` in MongoDB (default is `'user'`, only seeded `alex` is admin)
+- Files: `frontend/src/pages/AdminPage.jsx`, `frontend/src/components/Navbar.jsx`
+
+### 2026-04-19: Build-gated droplet deploy workflow
+- Upgraded the GitHub deploy workflow so `main` now does a CI Node build before SSHing to the droplet
+- Deploy step now uses `git fetch` + `git pull --ff-only` before rebuilding the Compose service
+- Added a post-deploy live-site check against `https://gather.froesch.dev/`
+- Updated README + WORK notes to reflect the safer deploy flow
+- Files: `.github/workflows/deploy.yml`, `README.md`, `WORK.md`
+
 ### 2026-03-23: Hide seed data from real users + "Sample" badges
 - Tagged all seed content (posts, events, comments, songs, polls, messages) with `isDemo: true` in `seedData.js`
 - Real users no longer see seed data (existing `demoFilter()` handles it)

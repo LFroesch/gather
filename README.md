@@ -219,6 +219,10 @@ npm run build   # installs deps + builds frontend
 npm start       # serves backend + static frontend
 ```
 
+### Production deploy
+
+`main` deploys to the DigitalOcean droplet through GitHub Actions. The workflow now does a CI build first, then SSHes to the droplet to rebuild/restart the `gather` Compose service, then verifies `https://gather.froesch.dev/` responds.
+
 ## License
 
 [AGPL-3.0](LICENSE) — Lucas Froeschner, 2026
