@@ -4,10 +4,29 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: gather-deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
       - name: Deploy to droplet
         uses: appleboy/ssh-action@v1
         with:
@@ -16,6 +35,19 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd /opt/apps/gather
-            git pull origin main
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
             docker compose -f /opt/apps/docker-compose.yml build gather
             docker compose -f /opt/apps/docker-compose.yml up -d gather
+
+      - name: Verify live site
+        run: |
+          for i in {1..12}; do
+            if curl -fsS --max-time 10 https://gather.froesch.dev/ >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Gather health check failed after deploy" >&2
+          exit 1
