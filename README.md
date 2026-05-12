@@ -1,228 +1,141 @@
 # Gather
 
-Gather is a location-based social app I built to help people find events, share posts, and connect with others in their area. Think of it like a neighborhood bulletin board with real-time chat, polls, and a song voting feature thrown in.
+Location-based social app for nearby events, posts, messaging, polls, and lightweight community discovery.
 
-<!-- TODO: hero screenshot here — home feed with a few posts/events visible -->
+Gather is a full-stack social product built around local context. Users can post nearby updates, create events, chat with friends in real time, vote in community polls, and manage a profile with social graph features like follows and friendships.
 
-## Screenshots
+## What works well
 
-<details>
-<summary>Home Feed</summary>
+- Nearby events and posts using MongoDB geospatial queries
+- Real-time messaging and notifications with Socket.IO
+- Follow and friendship systems with DM gating
+- Community polls and a separate song-voting feature
+- Admin moderation tools and role-based access
+- Mobile-friendly layouts and theme support through DaisyUI
 
-<!-- screenshot: logged in as alex, nearby tab, mix of posts and events visible -->
+## Stack
 
-</details>
+| Layer | Technologies |
+|-------|--------------|
+| Frontend | React, Vite, Zustand, Tailwind, DaisyUI |
+| Backend | Node.js, Express, MongoDB, Mongoose |
+| Realtime | Socket.IO |
+| Auth | JWT in httpOnly cookies |
+| Uploads | Cloudinary |
+| Email | Resend |
 
-<details>
-<summary>Events</summary>
+## Feature overview
 
-<!-- screenshot: Rooftop Vinyl Night event page — RSVPs, comments, invite button -->
-<!-- screenshot: create event form with location picker and category dropdown -->
+### Events
 
-</details>
+Create local events with categories, images, comments, RSVPs, and friend invites.
 
-<details>
-<summary>Real-time Chat</summary>
+### Posts
 
-<!-- gif: conversation with jordan, sending a message, online indicator visible -->
+Share local text or image posts, like and comment on them, and browse nearby or following-scoped content.
 
-</details>
+### Messaging
 
-<details>
-<summary>Search</summary>
+Send direct messages with live updates, presence, and image support.
 
-<!-- gif: searching "music", results loading across events/posts/users tabs -->
+### Social graph
 
-</details>
+Use follows for one-way discovery and friendships for mutual connections and messaging permissions.
 
-<details>
-<summary>Polls & Song Voting</summary>
+### Polls and song voting
 
-<!-- screenshot: PollsPage with active polls, vote counts -->
-<!-- screenshot: VotingPage leaderboard with daily chart -->
+Run community polls with admin approval and a separate daily song-voting flow with leaderboard/history views.
 
-</details>
+### Moderation
 
-<details>
-<summary>Notifications</summary>
+Admin routes cover user management, report review, poll approval, and song moderation.
 
-<!-- screenshot: notification dropdown with friend request (accept/reject), RSVP, comment notifs -->
+## Local development
 
-</details>
+Requirements:
 
-<details>
-<summary>Profiles</summary>
+- Node.js 18+
+- MongoDB
+- Cloudinary account for uploads
 
-<!-- screenshot: alex's profile with posts, events, friends list -->
-<!-- screenshot: viewing another user's profile with follow/friend buttons -->
-
-</details>
-
-<details>
-<summary>Admin Dashboard</summary>
-
-<!-- screenshot: admin stats overview, user management table -->
-<!-- screenshot: report review queue or poll approval -->
-
-</details>
-
-<details>
-<summary>Themes</summary>
-
-<!-- gif or side-by-side: same page in 2-3 different themes -->
-
-</details>
-
-<details>
-<summary>Mobile</summary>
-
-<!-- screenshot: home feed at mobile width, bottom nav visible -->
-
-</details>
-
-## Tech Stack
-
-| Layer | Tech |
-|-------|------|
-| Frontend | React 18, Zustand, Tailwind + DaisyUI, React Router |
-| Backend | Node.js, Express, Mongoose |
-| Database | MongoDB (with geospatial indexes for location queries) |
-| Real-time | Socket.IO for chat and live notifications |
-| Auth | JWT stored in httpOnly cookies, role-based access |
-| File uploads | Cloudinary |
-| Geocoding | Nominatim (free, no API key needed) |
-| Email | Resend (password resets) |
-
-## What it does
-
-**Events** — Create events with images, categories, and capacity limits. RSVP as yes/maybe/no. Invite friends. Comment and reply on events. Everything is scoped to your area using MongoDB `$geoNear`, so you only see stuff nearby.
-
-**Posts** — Share text or image posts tied to your location. Like, comment, tag a venue. Short text-only posts get a different "thought bubble" layout, longer ones look more like tweets.
-
-**Real-time messaging** — DM friends through Socket.IO. Online/offline indicators, image sharing. Messaging is gated behind friendship by default (configurable in settings).
-
-**Friends & follows** — Following is one-way (see their content). Friendship is mutual (unlocks DMs). Friend requests show up in notifications with accept/reject buttons.
-
-**Community polls** — Create polls with 2-4 options, tied to a location and category. Polls need admin approval before they go live. Filter by active, expired, or your own.
-
-**Song voting** — Submit songs, vote once per day, see a live leaderboard. Historical daily charts with date navigation.
-
-**Search** — Search events, posts, and users with geo filtering. Scope results to "nearby" or "following." All three queries fire in parallel.
-
-**Notifications** — Real-time via Socket.IO. Covers RSVPs, comments, replies, friend requests, follows, event invites, and poll approvals. Friend requests have inline accept/reject buttons right in the notification.
-
-**Admin dashboard** — Platform-wide stats, user management (roles, bans), report review queue, poll approval, and song moderation. Admin routes are protected on both backend (middleware) and frontend (route guard + redirect).
-
-**Themes** — 32 theme options via DaisyUI. Persisted in Zustand store. Everything uses semantic theme classes so every theme just works.
-
-**Moderation & safety** — Profanity filter (`bad-words`), HTML sanitization (`sanitize-html`), content reporting with admin review queue. Rate limiting on auth routes. Helmet for security headers.
-
-**Mobile responsive** — Bottom nav on small screens, responsive layouts throughout. Usable on a phone without squinting.
-
-## Project structure
-
-```
-gather/
-├── backend/src/
-│   ├── controllers/    # request handlers
-│   ├── models/         # mongoose schemas
-│   ├── routes/         # express routers
-│   ├── middleware/      # auth + admin guards
-│   └── lib/            # db, socket.io, cloudinary, email, utils
-├── frontend/src/
-│   ├── pages/          # route-level components
-│   ├── components/     # shared UI
-│   ├── store/          # zustand stores
-│   └── lib/            # axios instance, helpers
-└── package.json        # root scripts
-```
-
-## Why I made these choices
-
-- **Zustand instead of Redux** — way less boilerplate for a project this size, and the API is nicer to work with
-- **httpOnly cookies for JWT** — tokens can't be stolen via XSS like they can from localStorage
-- **MongoDB geospatial indexes** — `$geoNear` handles proximity queries natively, no need for a separate geo service
-- **Socket.IO rooms** — each user gets their own room, makes it easy to target messages and track presence
-
-## API overview
-
-The full API has ~50 endpoints across these route groups. Here are the main ones:
-
-| Route group | What it covers |
-|-------------|----------------|
-| `/api/auth` | Signup, login, logout, profile updates, password reset |
-| `/api/events` | CRUD, RSVP, invites, nearby/following/search queries |
-| `/api/posts` | CRUD, likes, nearby/following/search queries |
-| `/api/messages` | Conversations list, message history, send messages |
-| `/api/follow` | Follow/unfollow, notifications |
-| `/api/friends` | Friend requests, accept/reject/remove |
-| `/api/geo` | Location updates, city search, radius settings |
-| `/api/polls` | CRUD, voting, admin approval |
-| `/api/voting` | Song submission, daily votes, charts, stats |
-| `/api/comments` | Comments on posts/events, replies, likes |
-| `/api/reports` | Submit + review reports |
-| `/api/admin` | Dashboard stats, user/song management, role changes |
-
-## Getting started
-
-You'll need Node 18+, a MongoDB instance ([Atlas free tier](https://www.mongodb.com/atlas) works), and a [Cloudinary](https://cloudinary.com/) account.
-
-1. Clone and install:
-
-   ```bash
-   git clone https://github.com/LFroesch/gather.git
-   cd gather
-   npm install && cd backend && npm install && cd ../frontend && npm install
-   ```
-
-2. Create `backend/.env`:
-
-   ```env
-   MONGODB_URI=your_mongodb_uri
-   PORT=5001
-   JWT_SECRET=pick_something_random
-   CLOUDINARY_CLOUD_NAME=your_cloud_name
-   CLOUDINARY_API_KEY=your_key
-   CLOUDINARY_API_SECRET=your_secret
-   NODE_ENV=development
-   CLIENT_URL=http://localhost:5173
-   RESEND_API_KEY=re_xxx                     # for password reset emails (resend.com)
-   FROM_EMAIL=noreply@yourdomain.com         # verified domain in Resend
-   ```
-
-3. Seed demo data (optional):
-
-   ```bash
-   cd backend && node src/seed.js
-   ```
-
-   This creates 4 users, events, posts, polls, songs, friendships, and messages. Login with `alex@demo.com` / `password123` (admin) or any of the other demo accounts.
-
-4. Check seed image URLs (optional):
-
-   ```bash
-   cd backend && ./src/check-seed-images.sh
-   ```
-
-   Unsplash URLs can expire — this checks all image URLs in the seed data and flags any that return non-200.
-
-4. Run it:
-
-   ```bash
-   npm run dev   # starts backend (5001) + frontend (5173)
-   ```
-
-### Production build
+Install:
 
 ```bash
-npm run build   # installs deps + builds frontend
-npm start       # serves backend + static frontend
+git clone https://github.com/LFroesch/gather.git
+cd gather
+npm install
+npm install --prefix backend
+npm install --prefix frontend
 ```
 
-### Production deploy
+Create your backend env file:
 
-`main` deploys to the DigitalOcean droplet through GitHub Actions. The workflow now does a CI build first, then SSHes to the droplet to rebuild/restart the `gather` Compose service, then verifies `https://gather.froesch.dev/` responds.
+```bash
+cp backend/.env.example backend/.env
+```
+
+The main values are defined in [`backend/.env.example`](backend/.env.example).
+
+Run in development:
+
+```bash
+npm run dev
+```
+
+Default local URLs:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5000`
+
+## Seed data
+
+Seed the local demo data with:
+
+```bash
+npm run seed --prefix backend
+```
+
+The seed includes demo users, events, posts, polls, songs, and messages.
+
+If you want to verify seeded image URLs:
+
+```bash
+./backend/src/check-seed-images.sh
+```
+
+## Production notes
+
+Build the frontend:
+
+```bash
+npm run build
+```
+
+Then start the backend with `NODE_ENV=production` so it serves `frontend/dist`:
+
+```bash
+NODE_ENV=production npm start
+```
+
+That detail matters here because static frontend serving is only enabled in production mode.
+
+## API surface
+
+Main route groups:
+
+- `/api/auth`
+- `/api/events`
+- `/api/posts`
+- `/api/messages`
+- `/api/follow`
+- `/api/friends`
+- `/api/geo`
+- `/api/polls`
+- `/api/voting`
+- `/api/comments`
+- `/api/reports`
+- `/api/admin`
 
 ## License
 
-[AGPL-3.0](LICENSE) — Lucas Froeschner, 2026
+[AGPL-3.0](LICENSE)
