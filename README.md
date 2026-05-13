@@ -4,6 +4,9 @@ Location-based social app for nearby events, posts, messaging, polls, and lightw
 
 Gather is a full-stack social product built around local context. Users can post nearby updates, create events, chat with friends in real time, vote in community polls, and manage a profile with social graph features like follows and friendships.
 
+**Live app:** [gather.froesch.dev](https://gather.froesch.dev)
+**Portfolio:** [froesch.dev](https://froesch.dev)
+
 ## What works well
 
 - Nearby events and posts using MongoDB geospatial queries
